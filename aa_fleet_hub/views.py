@@ -1397,8 +1397,8 @@ def readiness_index(request):
         # concurrent page loads during the same gap don't each queue their
         # own recompute.
         invalidate_readiness_cache()
-    # Same visibility rules as the member-facing Doctrines page — FCs shouldn't
-    # see readiness for group-gated doctrines (e.g. capital sig) they aren't part of.
+    # Same visibility rules as the member-facing Doctrines page: FCs shouldn't
+    # see readiness for group-restricted doctrines they aren't part of.
     doctrines = visible_doctrines(request.user)
     doctrine_readiness = []
     for doctrine in doctrines:

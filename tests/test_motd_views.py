@@ -23,7 +23,7 @@ TEMPLATES = Path(views.__file__).parent / "templates"
 INGAME_MOTD = (
     '  <font size="14" color="#ffd98d00"><b>HOME DEFENCE</b></font>\r\n'
     "\r\n"
-    'Comms: <a href="joinChannel:player_-12345">Bane Fleet</a>  \n'
+    'Comms: <a href="joinChannel:player_-12345">Main Fleet</a>  \n'
 )
 
 pytestmark = pytest.mark.django_db

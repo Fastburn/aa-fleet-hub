@@ -2,8 +2,9 @@ name: Release
 
 # Runs when a GitHub Release is published. Builds the package, checks the
 # release tag matches the version in pyproject.toml, and attaches the wheel
-# and sdist to the release. Publishing to PyPI only happens on a repository
-# where the Actions variable PYPI_PUBLISH is set to "true".
+# and sdist to the release. Publishing to PyPI only happens on
+# Fastburn/aa-fleet-hub, and only while its Actions variable PYPI_PUBLISH is
+# set to "true".
 
 on:
   release:
@@ -37,7 +38,7 @@ jobs:
 
       - name: Build package
         run: |
-          pip install build
+          pip install "build>=1.2"
           python -m build
 
       - name: Attach to the release
@@ -55,7 +56,7 @@ jobs:
   publish:
     name: Publish to PyPI
     needs: build
-    if: vars.PYPI_PUBLISH == 'true'
+    if: github.repository == 'Fastburn/aa-fleet-hub' && vars.PYPI_PUBLISH == 'true'
     runs-on: ubuntu-latest
     environment: release
     permissions:

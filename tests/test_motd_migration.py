@@ -23,7 +23,7 @@ migration = importlib.import_module("aa_fleet_hub.migrations.0026_motd_from_doct
 INGAME_MOTD = (
     '  <font size="14" color="#ffd98d00"><b>HOME DEFENCE</b></font>\r\n'
     "\r\n"
-    'Comms: <a href="joinChannel:player_-12345">Bane Fleet</a>\n'
+    'Comms: <a href="joinChannel:player_-12345">Main Fleet</a>\n'
     'Staging: <a href="showinfo:5//30000142">Jita</a>\t— x-up in fleet\n'
     "Doctrine: <url=fitting:11987:2048;1:::>Guardian</url>  \n"
 )
