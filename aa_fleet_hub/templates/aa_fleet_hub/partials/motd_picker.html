@@ -1,0 +1,16 @@
+{% comment %}
+Apply Structure's MOTD picker (#3). Pass structure, choices (a list of
+(group label, MOTDs)) and selected (the MOTD to preselect, or None).
+The Apply button names it with data-motd-select="motd-pick-<structure id>".
+{% endcomment %}
+<select class="form-select form-select-sm fh-motd-pick" id="motd-pick-{{ structure.id }}"
+        aria-label="MOTD to push with {{ structure.name }}" onclick="event.stopPropagation()">
+  <option value="">No MOTD</option>
+  {% for label, group in choices %}
+  <optgroup label="{{ label }}">
+    {% for m in group %}
+    <option value="{{ m.pk }}"{% if selected and m.pk == selected.pk %} selected{% endif %}>{{ m.name }}{% if m.is_default %} (default){% endif %}</option>
+    {% endfor %}
+  </optgroup>
+  {% endfor %}
+</select>

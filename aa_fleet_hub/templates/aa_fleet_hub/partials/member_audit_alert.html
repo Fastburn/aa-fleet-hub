@@ -1,0 +1,10 @@
+{% if active_character_id and not member_audit_registered %}
+<div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
+  <span>⚠</span>
+  <div>
+    This character isn't registered with Member Audit, so skill data can't be
+    checked — readiness will show as "Not yet" for everything.
+    <a href="{% url 'memberaudit:launcher' %}">Register it here</a>.
+  </div>
+</div>
+{% endif %}

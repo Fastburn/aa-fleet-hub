@@ -1,0 +1,75 @@
+{% load i18n static %}
+<link rel="stylesheet" href="{% static 'aa_fleet_hub/css/fleet.css' %}">
+
+<div class="card mb-3" id="fleet-readiness-widget">
+  <div class="card-header d-flex align-items-center" style="padding:10px 14px">
+    <div style="font-size:13px;font-weight:600">⚑ Fleet Readiness</div>
+    <a href="{% url 'aa_fleet_hub:index' %}" class="ms-auto me-3" style="font-size:11px;color:var(--bs-secondary-color)"
+       onclick="event.stopPropagation()">View Doctrines →</a>
+    <form method="post" action="{% url 'aa_fleet_hub:fleet_widget_toggle' %}" style="display:inline"
+          onclick="event.stopPropagation()">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="/dashboard/">
+      <button type="submit" style="background:none;border:none;font-size:10px;color:var(--bs-secondary-color);cursor:pointer;padding:0">✕ Hide</button>
+    </form>
+  </div>
+
+  <div style="padding:10px 14px">
+
+    {% include "aa_fleet_hub/partials/member_audit_alert.html" %}
+
+    {% if closest %}
+    <div style="background:rgba(77,157,224,.08);border:1px solid rgba(77,157,224,.2);border-radius:4px;padding:6px 10px;margin-bottom:10px;font-size:11px">
+      🎯 <strong>{{ closest.fit.name }}</strong> in {{ closest.doctrine.name }} — {{ closest.missing }} skill{{ closest.missing|pluralize }} to {{ closest.tier.label }}
+    </div>
+    {% endif %}
+
+    {% if personal_readiness %}
+      {% for item in personal_readiness %}
+      <div style="margin-bottom:8px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--bs-secondary-color);margin-bottom:3px">{{ item.doctrine }}</div>
+        {% for fit in item.fits %}
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;margin-bottom:2px">
+          <img src="{{ fit.image }}" width="16" height="16" style="border-radius:2px;opacity:.8" alt="">
+          <span style="flex:1;color:var(--bs-body-color)">{{ fit.name }}</span>
+          {% if fit.bucket == "max" %}
+            <span class="badge badge-ready" style="font-size:9px">{{ fit.tier }}</span>
+          {% elif fit.bucket == "rec" %}
+            <span class="badge badge-close" style="font-size:9px">{{ fit.tier }}</span>
+          {% elif fit.bucket == "min" %}
+            <span class="badge badge-training" style="font-size:9px">{{ fit.tier }}</span>
+          {% else %}
+            <span class="badge badge-far" style="font-size:9px">Not yet</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    {% else %}
+      <div style="font-size:12px;color:var(--bs-secondary-color)">No doctrines available.</div>
+    {% endif %}
+
+    {% if fc_summary %}
+    <div style="border-top:1px solid var(--bs-border-color);margin-top:8px;padding-top:8px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--bs-secondary-color);margin-bottom:6px">
+        Alliance Readiness
+        <a href="{% url 'aa_fleet_hub:readiness_index' %}" style="font-weight:400;margin-left:6px;color:#4d9de0">Fleet Command →</a>
+      </div>
+      {% for item in fc_summary %}
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px;margin-bottom:4px">
+        <span style="flex:1;color:var(--bs-body-color)">{{ item.doctrine }}</span>
+        <span style="color:#4caf6b;font-weight:600">{{ item.ready }}</span>
+        <span style="color:var(--bs-secondary-color);font-size:10px">/ {{ item.total }}{% if item.pilot_total is not None %} chars · <span style="color:#4caf6b;font-weight:600;font-size:11px">{{ item.pilots_ready }}</span> / {{ item.pilot_total }} pilots{% endif %}</span>
+        <div class="prog-bar" style="width:60px;margin:0">
+          {% if item.total %}
+            <div class="prog-seg" style="width:{% widthratio item.ready item.total 100 %}%;background:#4caf6b"></div>
+            <div class="prog-seg" style="width:{% widthratio item.not_ready item.total 100 %}%;background:rgba(128,128,128,.2)"></div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div>
+</div>

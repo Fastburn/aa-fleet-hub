@@ -1,0 +1,115 @@
+{% extends 'aa_fleet_hub/base.html' %}
+{% load i18n static %}
+
+{% block page_title %}Fleet Command{% endblock %}
+{% block nav_fleet_command %}active{% endblock %}
+
+{% block fleet_content %}
+<div class="container-fluid">
+
+{% if is_computing %}
+  <div class="alert alert-info mb-3">
+    Readiness data is being processed — check back shortly.
+  </div>
+  {% endif %}
+
+
+  {% if doctrine_readiness %}
+  <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+    <button type="button" class="fh-btn fh-btn-secondary fh-collapse-all-btn" data-collapse-target="[id^='fc-doc-']" onclick="toggleAllFleetCommand(this)">Collapse All</button>
+  </div>
+  {% endif %}
+
+  {% if doctrine_tags|length > 1 %}
+  <div class="fh-tag-filter-bar" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+    <button type="button" class="fh-btn fh-btn-secondary fh-tag-filter-btn active" data-tag-filter="" onclick="filterDoctrineTag(this, '')">All</button>
+    {% for tag_label in doctrine_tags %}
+    <button type="button" class="fh-btn fh-btn-secondary fh-tag-filter-btn" data-tag-filter="{{ tag_label }}" onclick="filterDoctrineTag(this, '{{ tag_label|escapejs }}')">{{ tag_label }}</button>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% for tag_label, group_items, pinned in doctrine_groups %}
+    <div class="fh-tag-group" data-tag-group="{% if not pinned %}{{ tag_label }}{% endif %}"{% if pinned %} data-pinned{% endif %}>
+    {% if doctrine_groups|length > 1 %}
+    <div class="fh-tag-section-hdr">{{ tag_label }}</div>
+    {% endif %}
+    {% for item in group_items %}
+  <div class="card mb-3" data-doc-tag="{{ item.doctrine.tag_label }}">
+
+    <!-- Doctrine header -->
+    <div class="card-header d-flex align-items-center" style="cursor:pointer"
+         data-fc-collapse="fc-doc-{{ item.doctrine.id }}">
+      <div style="user-select:none">
+        <div style="font-size:13px;font-weight:600">
+          <span class="doctrine-arrow{% if not item.doctrine.collapsed_by_default %} open{% endif %}" style="margin-right:6px">&#9654;&#xFE0E;</span>{{ item.doctrine.name }} {% include "aa_fleet_hub/partials/doctrine_tag.html" with doctrine=item.doctrine %}
+        </div>
+        {% if item.data %}
+          <div style="font-size:11px;color:var(--bs-secondary-color);margin-top:1px">
+            {{ item.data.total }} character{{ item.data.total|pluralize }}{% if item.data.pilot_total is not None %} · {{ item.data.pilot_total }} pilot{{ item.data.pilot_total|pluralize }}{% endif %} tracked
+          </div>
+        {% endif %}
+      </div>
+      <div class="ms-auto d-flex align-items-center gap-2" onclick="event.stopPropagation()">
+        <a href="{% url 'aa_fleet_hub:readiness_doctrine' item.doctrine.id %}"
+           class="fh-btn fh-btn-secondary">Full Breakdown →</a>
+      </div>
+    </div>
+
+    <!-- Collapsible body -->
+    <div id="fc-doc-{{ item.doctrine.id }}"{% if item.doctrine.collapsed_by_default %} style="display:none"{% endif %}>
+
+    <!-- Readiness stats -->
+    {% if item.data %}
+    <div class="card-body">
+      {% for fit in item.data.fits %}
+      <div style="{% if not forloop.last %}margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--bs-border-color);{% endif %}">
+        <div style="font-size:11px;font-weight:600;color:var(--bs-secondary-color);margin-bottom:8px">{{ fit.fit_name }}</div>
+        <div class="readiness-stat-grid" style="grid-template-columns:repeat({{ fit.display_tiers|length }},1fr)">
+          {% for t in fit.display_tiers %}
+          <div>
+            <div class="readiness-stat-num" style="color:{{ t.color }}">{{ t.count }}</div>
+            <div class="readiness-stat-lbl">{{ t.label }}</div>
+            {% if t.pilots is not None %}<div class="readiness-stat-lbl" style="margin-top:0;opacity:.8">{{ t.pilots }} pilot{{ t.pilots|pluralize }}</div>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        <div class="prog-bar">
+          {% if item.data.total %}
+            {% for t in fit.display_tiers %}
+              <div class="prog-seg" style="width:{% widthratio t.count item.data.total 100 %}%;background:{{ t.color }}"></div>
+            {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+      {% empty %}
+        {% if item.has_fits %}
+          <div style="font-size:12px;color:var(--bs-secondary-color)">No skill requirements set up yet — add skill tiers to this doctrine's fits to track readiness here.</div>
+        {% else %}
+          <div style="font-size:12px;color:var(--bs-secondary-color)">No fits in this doctrine.</div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% elif is_computing %}
+    <div class="card-body">
+      <div style="text-align:center;padding:12px 0;color:var(--bs-secondary-color);font-size:12px">Computing…</div>
+    </div>
+    {% else %}
+    <!-- Draft doctrines aren't included in the readiness cache (update_readiness_cache
+         only computes is_draft=False) but are still visible here to officers previewing
+         them — show a placeholder so the card isn't empty. -->
+    <div class="card-body">
+      <div style="font-size:12px;color:var(--bs-secondary-color)">Draft doctrine — readiness isn't tracked until it's published.</div>
+    </div>
+    {% endif %}
+
+    </div>{# /fc-doc collapsible #}
+  </div>
+    {% endfor %}
+    </div>{# /fh-tag-group #}
+  {% empty %}
+    <div style="text-align:center;padding:60px 0;color:var(--bs-secondary-color)">No active doctrines.</div>
+  {% endfor %}
+
+</div>
+{% endblock %}

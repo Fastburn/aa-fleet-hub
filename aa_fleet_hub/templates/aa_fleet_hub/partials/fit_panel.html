@@ -1,0 +1,148 @@
+{% load i18n %}
+<!-- Panel header -->
+<div class="fp-header">
+  <img src="{{ fit.ship_image_url_128 }}"
+       class="fp-ship-img{% if has_hull %} hull-owned{% elif has_hull == False %} hull-not-owned{% endif %}"
+       alt="{{ fit.name }}"
+       {% if has_hull and hull_locations %}title="In hangar: {{ hull_locations|join:', ' }}"{% elif has_hull == False %}title="Not in hangar"{% endif %}>
+  <div class="fp-ship-info">
+    <div class="fp-ship-name">{{ fit.name }}{% if not fit.is_skill_plan %}&nbsp;&nbsp;<span style="font-size:11px;color:var(--bs-secondary-color);font-family:monospace">v{{ fit.version }}</span>{% endif %}</div>
+    <div class="fp-ship-sub">
+      {{ fit.doctrine.name }}{% if fit.role %} · {{ fit.role }}{% endif %}
+    </div>
+  </div>
+  <button class="fp-close" onclick="closeFitPanel()">&#215;</button>
+</div>
+
+<!-- Tabs (hidden for skill plans) -->
+{% if not fit.is_skill_plan %}
+<div class="fp-tabs">
+  <div class="fp-tab active" id="fp-tab-fit" onclick="fpSwitchTab('fit')">Fit</div>
+  <div class="fp-tab" id="fp-tab-skills" onclick="fpSwitchTab('skills')">Skill Requirements</div>
+</div>
+{% endif %}
+
+<!-- Scrollable content -->
+<div class="fp-scroll">
+
+  <!-- Fit tab -->
+  {% if not fit.is_skill_plan %}
+  <div id="fp-content-fit">
+    {% if fit.eft %}
+      <pre id="fp-eft-block" class="fp-eft" data-version="{{ fit.version }}">{{ fit.eft }}</pre>
+    {% else %}
+      <div class="fp-empty">No fit data entered yet.</div>
+    {% endif %}
+    {% if changelog %}
+    <div style="margin-top:12px;border-top:1px solid rgba(255,255,255,.08);padding-top:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--bs-secondary-color);letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px">Change History</div>
+      {% for entry in changelog %}
+      <div style="display:flex;gap:8px;font-size:11.5px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <span style="font-family:monospace;color:#4d9de0;white-space:nowrap">v{{ entry.version }}</span>
+        <span style="color:var(--bs-secondary-color);white-space:nowrap">{{ entry.changed_by.profile.main_character.character_name|default:entry.changed_by.username }}</span>
+        <span style="flex:1;color:var(--bs-body-color)">{{ entry.note }}</span>
+        <span style="color:var(--bs-secondary-color);white-space:nowrap">{{ entry.created_at|date:"d M Y" }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Skills tab -->
+  <div id="fp-content-skills" {% if not fit.is_skill_plan %}style="display:none"{% endif %}>
+
+    {% include "aa_fleet_hub/partials/member_audit_alert.html" %}
+
+    <!-- PI Templates inline (skill plans only, above skill summary) -->
+    {% if fit.is_skill_plan and fit.pi_plans %}
+      {% include "aa_fleet_hub/partials/pi_plans.html" with pi_plans=fit.pi_plans %}
+      <hr style="border-color:var(--bs-border-color);margin:12px 0">
+    {% endif %}
+
+    <!-- Summary bar -->
+    <div class="fp-summary-bar">
+      <div class="fp-summary-text">
+        {% if readiness.total_missing == 0 %}
+          <span class="text-success">All skills met across all tiers ✓</span>
+        {% else %}
+          <span class="{{ readiness.status_class }}">{{ readiness.total_missing }} skill{{ readiness.total_missing|pluralize }}</span> need training
+        {% endif %}
+      </div>
+    </div>
+
+    {% if fit.notes %}
+      <div class="fp-notes">{{ fit.notes }}</div>
+    {% endif %}
+
+    {% for tier_data in readiness.tiers %}
+      <div class="fp-tier-section">
+        <div class="fp-tier-hdr">
+          <span class="fp-tier-name">{{ tier_data.tier.label }}</span>
+          <span class="badge badge-{{ tier_data.badge }}">
+            {% if tier_data.missing_count == 0 %}Ready
+            {% elif tier_data.missing_count <= 2 %}{{ tier_data.missing_count }} skill{{ tier_data.missing_count|pluralize }}
+            {% elif tier_data.missing_count <= 4 %}Training
+            {% else %}Not yet{% endif %}
+          </span>
+          {% if tier_data.tier.description %}
+            <span class="fp-tier-desc">{{ tier_data.tier.description }}</span>
+          {% endif %}
+          <button type="button" class="fp-export-btn ms-auto"
+                  onclick="copyTierSkills(this, '{% url 'aa_fleet_hub:export_tier_skills' fit.id tier_data.tier.id %}')">
+            Get {{ tier_data.tier.label }}
+          </button>
+        </div>
+        {% if tier_data.tier.warning %}
+          <div class="warn-banner">⚠ {{ tier_data.tier.warning }}</div>
+        {% endif %}
+        <div class="skill-grid">
+          {% for row in tier_data.skill_rows %}
+            <div class="sg-row">
+              <span class="sg-name {{ row.sg_class }}" title="{{ row.tooltip }}"
+                    data-skill="{{ row.skill_name }}" data-req="{{ row.required_level }}" data-have="{{ row.trained }}">{{ row.skill_name }}</span>
+              <span class="pips">
+                {% for state in row.pips %}<span class="pip {{ state }}"></span>{% endfor %}
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+
+</div>
+
+<!-- Footer -->
+<div class="fp-footer">
+  <div class="fp-stat">
+    <div class="fp-stat-label">Your Status</div>
+    <div class="fp-stat-val {{ readiness.status_class }}">{{ readiness.status_text }}</div>
+  </div>
+  <div class="fp-stat-sep"></div>
+  <div class="fp-stat">
+    <div class="fp-stat-label">Highest Tier</div>
+    <div class="fp-stat-val {% if readiness.best_tier_index != None %}text-success{% else %}text-danger{% endif %}">
+      {{ readiness.best_tier_label }}
+    </div>
+  </div>
+  {% if has_hull or has_hull == False %}
+  <div class="fp-stat-sep"></div>
+  <div class="fp-stat">
+    <div class="fp-stat-label">Hull</div>
+    <div class="fp-stat-val {% if has_hull %}text-success{% else %}text-secondary{% endif %}">
+      {% if has_hull %}In hangar{% else %}Not in hangar{% endif %}
+    </div>
+  </div>
+  {% endif %}
+  <div style="flex:1"></div>
+  {% if not fit.is_skill_plan %}
+    <button class="fh-btn fh-btn-secondary" id="fp-copy-btn" {% if not fit.eft %}disabled title="No fit data entered"{% else %}onclick="fpCopyEft()"{% endif %}>Copy EFT</button>
+    <button class="fh-btn fh-btn-secondary" id="fp-buyall-btn" {% if not fit.eft %}disabled title="No fit data entered"{% else %}onclick="fpCopyBuyAll(this)"{% endif %}>Copy Buy All</button>
+    <button class="fh-btn fh-btn-info" id="fp-esi-btn"
+            {% if not fit.eft %}disabled title="No fit data entered"{% else %}onclick="fpSaveToEsi(this, '{% url 'aa_fleet_hub:fit_save_to_esi' fit.id %}')"{% endif %}>Save to ESI</button>
+  {% elif fit.is_skill_plan %}
+    <button class="fh-btn fh-btn-secondary" id="fp-copy-skillplan-btn" onclick="fpCopySkillPlan(this)">Copy Skill Plan</button>
+  {% endif %}
+</div>

@@ -1,0 +1,108 @@
+{% if pi_plans %}
+{% load i18n %}
+
+{% comment %}Planet type → accent color{% endcomment %}
+{# Templates are read back via json_script (not |safe / |escapejs) so the raw JSON #}
+{# a member copies to the clipboard for EVE's PI import stays byte-for-byte intact. #}
+{{ pi_plans|json_script:"pi-plans-view-data" }}
+<div class="pi-plans-section">
+  <div class="pi-plans-label">PI Templates</div>
+  <div class="pi-plans-hint">Copy a template and paste into EVE (right-click saved template slot → Import).</div>
+
+  {% for plan in pi_plans %}
+  <div class="pi-plan-group" data-plan="{{ forloop.counter0 }}">
+    {% if pi_plans|length > 1 %}
+    <div class="pi-plan-collapse-hdr" data-pi-collapse="pi-plan-body-{{ forloop.counter0 }}">
+      <span class="doctrine-arrow" style="margin-right:6px">&#9654;&#xFE0E;</span>{{ plan.name }}
+    </div>
+    <div class="pi-plan-body" id="pi-plan-body-{{ forloop.counter0 }}" style="display:none">
+    {% endif %}
+    {% if plan.desc %}
+    <div class="pi-plan-desc">{{ plan.desc }}</div>
+    {% endif %}
+
+    {% for planet in plan.planets %}
+    {% with ptype=planet.planet %}
+    <div class="pi-planet-row pi-planet-{{ ptype|lower }}" data-planet="{{ forloop.counter0 }}">
+      <div class="pi-planet-row-inner">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
+            <span class="pi-planet-type-badge pi-planet-{{ ptype|lower }}">{{ ptype }}</span>
+            <span style="font-size:12px;font-weight:600;color:var(--bs-body-color)">{{ planet.name }}</span>
+            {% if planet.produces %}<span style="font-size:11px;color:var(--bs-secondary-color)">→ {{ planet.produces }}</span>{% endif %}
+          </div>
+          {% if planet.desc %}
+            <div style="font-size:11px;color:var(--bs-secondary-color);margin-bottom:7px;line-height:1.5">{{ planet.desc }}</div>
+          {% endif %}
+          {% if planet.template %}
+            <div class="pi-template-preview pi-template-preview--js">
+              Template loaded · <em>Paste into EVE to import</em>
+            </div>
+          {% else %}
+            <div style="font-size:11px;color:var(--bs-secondary-color);font-style:italic">No template — members set up manually.</div>
+          {% endif %}
+        </div>
+        {% if planet.template %}
+        <button type="button" class="fh-btn fh-btn-secondary pi-copy-btn"
+                onclick="copyPiTemplate(this)">Copy</button>
+        {% endif %}
+      </div>
+    </div>
+    {% endwith %}
+    {% empty %}
+    <div style="font-size:12px;color:var(--bs-secondary-color);padding:8px 0">No planets added yet.</div>
+    {% endfor %}
+    {% if pi_plans|length > 1 %}
+    </div>{# /.pi-plan-body #}
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+// Read via json_script (not |safe / |escapejs) so the raw template JSON — which
+// contains its own quotes/backslashes — round-trips byte-for-byte to the clipboard.
+const PI_PLANS_VIEW_DATA = JSON.parse(document.getElementById('pi-plans-view-data').textContent);
+
+function _piTemplateFor(el) {
+  const planIdx = parseInt(el.closest('.pi-plan-group').dataset.plan, 10);
+  const planetIdx = parseInt(el.closest('.pi-planet-row').dataset.planet, 10);
+  return PI_PLANS_VIEW_DATA[planIdx]?.planets?.[planetIdx]?.template || '';
+}
+
+function copyPiTemplate(btn) {
+  const t = _piTemplateFor(btn);
+  if (!t) return;
+  navigator.clipboard.writeText(t).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+document.querySelectorAll('[data-pi-collapse]').forEach(function(header) {
+  header.addEventListener('click', function() {
+    var body = document.getElementById(this.getAttribute('data-pi-collapse'));
+    if (!body) return;
+    var isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : '';
+    var arrow = this.querySelector('.doctrine-arrow');
+    if (arrow) arrow.classList.toggle('open', !isOpen);
+  });
+});
+
+// Parse template JSON to show "Template loaded — Cmt · CCU Lv N"
+document.querySelectorAll('.pi-template-preview--js').forEach(el => {
+  let data;
+  try { data = JSON.parse(_piTemplateFor(el)); } catch { return; }
+  el.textContent = '';
+  el.appendChild(document.createTextNode('Template loaded'));
+  if (data.Cmt) {
+    el.appendChild(document.createTextNode(' — '));
+    const em = document.createElement('em');
+    em.textContent = data.Cmt;
+    el.appendChild(em);
+  }
+  el.appendChild(document.createTextNode(' · CCU Lv ' + (data.CmdCtrLv ?? '?')));
+});
+</script>
+{% endif %}

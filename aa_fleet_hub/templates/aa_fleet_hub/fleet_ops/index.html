@@ -1,0 +1,267 @@
+{% extends 'aa_fleet_hub/base.html' %}
+{% load i18n static %}
+
+{% block page_title %}Fleet Setup{% endblock %}
+{% block nav_fleet_ops %}active{% endblock %}
+
+{% block fleet_content %}
+<div class="container-fluid">
+
+  <div class="mb-3 d-flex align-items-center gap-2 flex-wrap">
+    {% if has_fleet_token %}
+      <span class="fh-btn fh-btn-secondary" style="opacity:0.6;cursor:default">Fleet Access Authorized</span>
+      <a href="{% url 'aa_fleet_hub:fleet_authorize' %}" style="font-size:11px;color:var(--bs-secondary-color)">Re-authorize</a>
+    {% else %}
+      <a href="{% url 'aa_fleet_hub:fleet_authorize' %}" class="fh-btn fh-btn-secondary">Authorize Fleet Access</a>
+    {% endif %}
+    <span style="font-size:11px;color:var(--bs-secondary-color)">
+      Grants ESI fleet read/write so Apply Structure can push wings, squads, and MOTD to your active fleet.
+    </span>
+    <span class="ms-auto d-flex gap-2">
+      <a href="{% url 'aa_fleet_hub:motd_create' %}" class="fh-btn fh-btn-primary">+ New MOTD</a>
+      <a href="{% url 'aa_fleet_hub:structure_create' %}" class="fh-btn fh-btn-primary">+ New Fleet Structure</a>
+    </span>
+  </div>
+
+  <!-- MOTDs (#3): every MOTD the user can see, searchable and filterable by doctrine -->
+  <section class="card mb-3" id="fh-motds" aria-labelledby="fh-motds-title">
+    <div class="card-header d-flex align-items-center gap-2 flex-wrap">
+      <h2 class="card-header-title" id="fh-motds-title" style="font-size:13px;margin:0">MOTDs</h2>
+      {% if motds %}
+      <input type="search" id="fh-motd-search" class="form-control form-control-sm ms-auto" style="max-width:260px"
+             placeholder="Search name or text…" aria-label="Search MOTDs by name or text" autocomplete="off">
+      <select id="fh-motd-doctrine" class="form-select form-select-sm" style="max-width:220px" aria-label="Filter MOTDs by doctrine">
+        <option value="">All doctrines</option>
+        {% if has_standalone_motds %}<option value="standalone">Standalone</option>{% endif %}
+        {% for doctrine in motd_doctrines %}
+        <option value="{{ doctrine.pk }}">{{ doctrine.name }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+    </div>
+    <div class="fh-motd-list">
+      {% for motd in motds %}
+      <div class="fh-motd-row" id="motd-{{ motd.pk }}" data-motd-id="{{ motd.pk }}"
+           data-motd-doctrine="{{ motd.doctrine_id|default:'standalone' }}" data-motd-name="{{ motd.name|lower }}">
+        <div class="fh-motd-line">
+          <span class="fh-motd-name">{{ motd.name }}</span>
+          <span class="fh-motd-where">{% if motd.doctrine %}{{ motd.doctrine.name }}{% else %}Standalone{% endif %}</span>
+          {% if motd.is_default %}<span class="badge fh-motd-badge">Default</span>{% endif %}
+          {% if motd.is_public %}<span class="badge fh-motd-badge">Public</span>{% endif %}
+          {% if motd.created_by_id == request.user.pk %}<span class="badge fh-motd-badge fh-motd-badge-own">Yours</span>{% endif %}
+          <span class="fh-motd-actions">
+            <button type="button" class="fh-btn fh-btn-secondary" onclick="copyMotd(this, {{ motd.pk }})">Copy</button>
+            {% if motd.editable %}<a href="{% url 'aa_fleet_hub:motd_edit' motd.pk %}" class="fh-btn fh-btn-secondary">Edit</a>{% endif %}
+          </span>
+        </div>
+        <details class="fh-motd-text">
+          <summary>Show text</summary>
+          <pre>{{ motd.text }}</pre>
+        </details>
+      </div>
+      {% empty %}
+      <div class="fh-motd-empty">No MOTDs yet. Use <b>+ New MOTD</b> to make one.</div>
+      {% endfor %}
+      {% if motds %}<div class="fh-motd-empty" id="fh-motd-none" hidden>No MOTDs match.</div>{% endif %}
+    </div>
+  </section>
+
+  {% if doctrine_ops %}
+  <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+    <button type="button" class="fh-btn fh-btn-secondary fh-collapse-all-btn" data-collapse-target="[id^='fc-doc-'], [id^='fc-standalone-']:not([id*='wing'])" onclick="toggleAllFleetCommand(this)">Collapse All</button>
+  </div>
+  {% endif %}
+
+  {% if doctrine_tags|length > 1 %}
+  <div class="fh-tag-filter-bar" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+    <button type="button" class="fh-btn fh-btn-secondary fh-tag-filter-btn active" data-tag-filter="" onclick="filterDoctrineTag(this, '')">All</button>
+    {% for tag_label in doctrine_tags %}
+    <button type="button" class="fh-btn fh-btn-secondary fh-tag-filter-btn" data-tag-filter="{{ tag_label }}" onclick="filterDoctrineTag(this, '{{ tag_label|escapejs }}')">{{ tag_label }}</button>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% for tag_label, group_items, pinned in doctrine_groups %}
+    <div class="fh-tag-group" data-tag-group="{% if not pinned %}{{ tag_label }}{% endif %}"{% if pinned %} data-pinned{% endif %}>
+    {% if doctrine_groups|length > 1 %}
+    <div class="fh-tag-section-hdr">{{ tag_label }}</div>
+    {% endif %}
+    {% for item in group_items %}
+  <div class="card mb-3" data-doc-tag="{{ item.doctrine.tag_label }}">
+
+    <!-- Doctrine header -->
+    <div class="card-header d-flex align-items-center" style="cursor:pointer"
+         data-fc-collapse="fc-doc-{{ item.doctrine.id }}">
+      <div style="user-select:none">
+        <div style="font-size:13px;font-weight:600">
+          <span class="doctrine-arrow{% if not item.doctrine.collapsed_by_default %} open{% endif %}" style="margin-right:6px">&#9654;&#xFE0E;</span>{{ item.doctrine.name }} {% include "aa_fleet_hub/partials/doctrine_tag.html" with doctrine=item.doctrine %}
+        </div>
+      </div>
+      <div class="ms-auto d-flex align-items-center gap-2" onclick="event.stopPropagation()">
+        {% if item.motds %}
+          <a href="#fh-motds" class="fh-motd-link" onclick="fhShowDoctrineMotds({{ item.doctrine.id }})">{{ item.motds|length }} MOTD{{ item.motds|length|pluralize }}</a>
+        {% endif %}
+        {% if item.default_motd %}
+          <button type="button" class="fh-btn fh-btn-secondary"
+                  onclick="copyMotd(this, {{ item.default_motd.pk }})"
+                  title="Copy the default MOTD: {{ item.default_motd.name }}">Copy MOTD</button>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Collapsible body -->
+    <div id="fc-doc-{{ item.doctrine.id }}"{% if item.doctrine.collapsed_by_default %} style="display:none"{% endif %}>
+
+    <!-- Fleet Structure Templates linked to this doctrine -->
+    {% if item.structures %}
+    <div>
+      {% for structure in item.structures %}
+      <div style="padding:10px 16px;{% if not forloop.last %}border-bottom:1px solid var(--bs-border-color);{% endif %}background:rgba(128,128,128,.03)">
+        <!-- Template header row -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;user-select:none"
+             data-fc-collapse="fc-struct-{{ item.doctrine.id }}-{{ forloop.counter }}">
+          <span class="doctrine-arrow{% if not structure.collapsed_by_default %} open{% endif %}">&#9654;&#xFE0E;</span>
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--bs-secondary-color)">Fleet Structure</span>
+          <span style="font-size:12px;font-weight:600;color:var(--bs-body-color)">{{ structure.name }}</span>
+          <span style="font-size:10px;color:var(--bs-secondary-color)">
+            · {% if structure.is_free_move %}Free-move ON{% else %}Free-move OFF{% endif %}
+          </span>
+          <span class="ms-auto d-flex align-items-center gap-2">
+            {% if item.motd_choices %}
+              {% include "aa_fleet_hub/partials/motd_picker.html" with structure=structure choices=item.motd_choices selected=item.default_motd %}
+            {% endif %}
+            <button type="button" class="fh-btn fh-btn-secondary"
+                    data-struct-id="{{ structure.id }}" data-wings="{{ structure.wings|length }}"
+                    {% if item.motd_choices %}data-motd-select="motd-pick-{{ structure.id }}"{% endif %}
+                    onclick="event.stopPropagation();applyStructure(this, '{% url 'aa_fleet_hub:structure_apply' structure.id %}')">Apply Structure</button>
+            {% if structure.editable %}<a href="{% url 'aa_fleet_hub:structure_edit' structure.id %}" class="fh-btn fh-btn-secondary" onclick="event.stopPropagation()">Edit</a>{% endif %}
+          </span>
+        </div>
+        <div id="struct-status-{{ structure.id }}" style="font-size:10px;color:var(--bs-secondary-color);padding:2px 0 4px 4px"></div>
+        <!-- Wing/squad tree -->
+        <div id="fc-struct-{{ item.doctrine.id }}-{{ forloop.counter }}" style="padding-left:4px;{% if structure.collapsed_by_default %}display:none{% endif %}">
+          {% for wing in structure.wings %}
+          <div style="margin-bottom:4px">
+            <div style="font-family:monospace;font-size:11px;color:#4d9de0;font-weight:600;letter-spacing:-.02em;cursor:pointer;user-select:none"
+                 data-fc-collapse="fc-wing-{{ item.doctrine.id }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
+              <span class="doctrine-arrow open" style="font-size:9px">&#9654;&#xFE0E;</span> ◈ {{ wing.name }}
+            </div>
+            <div id="fc-wing-{{ item.doctrine.id }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
+            {% for squad in wing.squads %}
+              {% if forloop.last %}<div style="font-family:monospace;font-size:11px;color:var(--bs-secondary-color);margin-left:2px">└── {{ squad }}</div>{% else %}<div style="font-family:monospace;font-size:11px;color:var(--bs-secondary-color);margin-left:2px">├── {{ squad }}</div>{% endif %}
+            {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    </div>{# /fc-doc collapsible #}
+  </div>
+    {% endfor %}
+    </div>{# /fh-tag-group #}
+  {% empty %}
+    <div style="text-align:center;padding:40px 0;color:var(--bs-secondary-color)">No doctrine MOTDs or fleet structures available to you.</div>
+  {% endfor %}
+
+  <!-- Standalone fleet structures, then ones on doctrines not listed above -->
+  {% for section_label, section_structures in structure_sections %}
+  {% if section_structures %}
+  <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--bs-secondary-color);margin:8px 0 10px">
+    {{ section_label }}
+  </div>
+  {% for structure in section_structures %}
+  <div class="card mb-3">
+    <div style="padding:10px 16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;user-select:none"
+           data-fc-collapse="fc-standalone-{{ structure.id }}">
+        <span class="doctrine-arrow{% if not structure.collapsed_by_default %} open{% endif %}" style="font-size:10px;color:var(--bs-secondary-color)">&#9654;&#xFE0E;</span>
+        <span style="font-size:12px;font-weight:600;color:var(--bs-body-color)">{{ structure.name }}</span>
+        <span style="font-size:10px;color:var(--bs-secondary-color)">
+          · {% if structure.is_free_move %}Free-move ON{% else %}Free-move OFF{% endif %}
+          {% if structure.doctrine %}· {{ structure.doctrine.name }} ({% if structure.doctrine.archived %}archived{% elif not structure.doctrine.active %}inactive{% else %}not visible to you{% endif %}){% endif %}
+        </span>
+        <span class="ms-auto d-flex align-items-center gap-2">
+          {% if standalone_motd_choices %}
+            {% include "aa_fleet_hub/partials/motd_picker.html" with structure=structure choices=standalone_motd_choices selected=None %}
+          {% endif %}
+          <button type="button" class="fh-btn fh-btn-secondary"
+                  data-struct-id="{{ structure.id }}" data-wings="{{ structure.wings|length }}"
+                  {% if standalone_motd_choices %}data-motd-select="motd-pick-{{ structure.id }}"{% endif %}
+                  onclick="event.stopPropagation();applyStructure(this, '{% url 'aa_fleet_hub:structure_apply' structure.id %}')">Apply Structure</button>
+          {% if structure.editable %}<a href="{% url 'aa_fleet_hub:structure_edit' structure.id %}" class="fh-btn fh-btn-secondary" onclick="event.stopPropagation()">Edit</a>{% endif %}
+        </span>
+      </div>
+      <div id="struct-status-{{ structure.id }}" style="font-size:10px;color:var(--bs-secondary-color);padding:2px 0 4px 4px"></div>
+      <div id="fc-standalone-{{ structure.id }}" style="padding-left:4px;{% if structure.collapsed_by_default %}display:none{% endif %}">
+        {% for wing in structure.wings %}
+        <div style="margin-bottom:4px">
+          <div style="font-family:monospace;font-size:11px;color:#4d9de0;font-weight:600;letter-spacing:-.02em;cursor:pointer;user-select:none"
+               data-fc-collapse="fc-standalone-wing-{{ structure.id }}-{{ forloop.counter }}">
+            <span class="doctrine-arrow open" style="font-size:9px">&#9654;&#xFE0E;</span> ◈ {{ wing.name }}
+          </div>
+          <div id="fc-standalone-wing-{{ structure.id }}-{{ forloop.counter }}">
+          {% for squad in wing.squads %}
+            {% if forloop.last %}<div style="font-family:monospace;font-size:11px;color:var(--bs-secondary-color);margin-left:2px">└── {{ squad }}</div>{% else %}<div style="font-family:monospace;font-size:11px;color:var(--bs-secondary-color);margin-left:2px">├── {{ squad }}</div>{% endif %}
+          {% endfor %}
+          </div>
+        </div>
+        {% empty %}
+          <span style="font-size:11px;color:var(--bs-secondary-color);font-style:italic">No wings defined.</span>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+  {% endfor %}
+
+</div>
+{% endblock %}
+
+{% block fleet_js %}
+{{ motd_texts|json_script:"fh-motd-texts" }}
+<script>
+window.FLEET_AUTHORIZE_URL = "{% url 'aa_fleet_hub:fleet_authorize' %}";
+
+// MOTD search over name and text, plus the doctrine filter (#3).
+function fhFilterMotds() {
+  const search = document.getElementById('fh-motd-search');
+  const doctrine = document.getElementById('fh-motd-doctrine');
+  if (!search || !doctrine) return;
+  const q = search.value.trim().toLowerCase();
+  const texts = JSON.parse(document.getElementById('fh-motd-texts').textContent);
+  let shown = 0;
+  document.querySelectorAll('.fh-motd-row').forEach(row => {
+    const text = (texts[row.dataset.motdId] || '').toLowerCase();
+    const match = (!q || row.dataset.motdName.includes(q) || text.includes(q))
+      && (!doctrine.value || row.dataset.motdDoctrine === doctrine.value);
+    row.hidden = !match;
+    if (match) shown++;
+  });
+  document.getElementById('fh-motd-none').hidden = shown > 0;
+}
+
+function fhShowDoctrineMotds(doctrineId) {
+  const search = document.getElementById('fh-motd-search');
+  const doctrine = document.getElementById('fh-motd-doctrine');
+  if (!doctrine) return;
+  search.value = '';
+  doctrine.value = String(doctrineId);
+  fhFilterMotds();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const search = document.getElementById('fh-motd-search');
+  if (!search) return;
+  search.addEventListener('input', fhFilterMotds);
+  document.getElementById('fh-motd-doctrine').addEventListener('change', fhFilterMotds);
+  // A link from elsewhere (#motd-<id>) opens that MOTD's text.
+  const target = location.hash.match(/^#motd-(\d+)$/) && document.querySelector(location.hash);
+  if (target) target.querySelector('details').open = true;
+});
+</script>
+{% endblock %}

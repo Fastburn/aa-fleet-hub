@@ -1,0 +1,182 @@
+{% extends 'aa_fleet_hub/base.html' %}
+{% load i18n static %}
+
+{% block page_title %}Manage Doctrines{% endblock %}
+{% block nav_manage %}active{% endblock %}
+
+{% block fleet_content %}
+<div class="container-fluid">
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+    {% if can_manage_doctrines %}
+      <a href="{% url 'aa_fleet_hub:doctrine_create' %}" class="fh-btn fh-btn-primary">+ New Doctrine</a>
+    {% endif %}
+    <button type="button" class="fh-btn fh-btn-secondary ms-auto fh-collapse-all-btn" data-collapse-target="[id^='manage-doc-']" onclick="toggleAllManage(this)">Collapse All</button>
+  </div>
+
+  {% if doctrine_tags|length > 1 %}
+  <div class="fh-tag-filter-bar" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+    <button type="button" class="fh-btn fh-btn-secondary fh-tag-filter-btn active" data-tag-filter="" onclick="filterDoctrineTag(this, '')">All</button>
+    {% for tag_label in doctrine_tags %}
+    <button type="button" class="fh-btn fh-btn-secondary fh-tag-filter-btn" data-tag-filter="{{ tag_label }}" onclick="filterDoctrineTag(this, '{{ tag_label|escapejs }}')">{{ tag_label }}</button>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% for tag_label, group_items, pinned in doctrine_groups %}
+  <div class="fh-tag-group" data-tag-group="{% if not pinned %}{{ tag_label }}{% endif %}"{% if pinned %} data-pinned{% endif %}>
+  {% if doctrine_groups|length > 1 %}
+  <div class="fh-tag-section-hdr">{{ tag_label }}</div>
+  {% endif %}
+  {% for doctrine in group_items %}
+  <div class="card mb-3" data-doc-tag="{{ doctrine.tag_label }}">
+
+    <!-- Doctrine header -->
+    <div class="card-header d-flex align-items-center" style="cursor:pointer"
+         data-manage-collapse="manage-doc-{{ doctrine.id }}">
+      <div style="font-size:13px;font-weight:600;user-select:none">
+        <span class="doctrine-arrow{% if not doctrine.collapsed_by_default %} open{% endif %}" style="margin-right:6px">&#9654;&#xFE0E;</span>{{ doctrine.name }} {% include "aa_fleet_hub/partials/doctrine_tag.html" with doctrine=doctrine %}
+      </div>
+      <div class="ms-auto d-flex gap-2 align-items-center" onclick="event.stopPropagation()">
+        <a href="{% url 'aa_fleet_hub:fit_create' doctrine.id %}" class="fh-btn fh-btn-success">+ Fit</a>
+        {% if can_manage_doctrines %}
+          <form method="post" action="{% url 'aa_fleet_hub:doctrine_duplicate' doctrine.id %}"
+                style="display:inline" onsubmit="return confirm('Duplicate {{ doctrine.name|escapejs }}?')">
+            {% csrf_token %}
+            <button type="submit" class="fh-btn fh-btn-info">Duplicate</button>
+          </form>
+          <a href="{% url 'aa_fleet_hub:doctrine_edit' doctrine.id %}" class="fh-btn fh-btn-secondary">Edit</a>
+          <form method="post" action="{% url 'aa_fleet_hub:doctrine_archive' doctrine.id %}" style="display:inline"
+                onsubmit="return confirm('Archive {{ doctrine.name|escapejs }}? It will be hidden but not deleted.')">
+            {% csrf_token %}
+            <button type="submit" class="fh-btn fh-btn-secondary">Archive</button>
+          </form>
+          <a href="{% url 'aa_fleet_hub:doctrine_delete' doctrine.id %}" class="fh-btn fh-btn-danger">Delete</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="doctrine-body" id="manage-doc-{{ doctrine.id }}"{% if doctrine.collapsed_by_default %} style="display:none"{% endif %}>
+    <!-- Fits table -->
+    <table class="manage-table">
+      <colgroup>
+        <col class="col-ship"><col class="col-role"><col class="col-tiers"><col class="col-actions">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Ship / Plan</th>
+          <th>Role</th>
+          <th>Skill Tiers</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for fit in doctrine.fits.all %}
+        <tr>
+          <td class="cell-ship">
+            <div>
+              <img src="{{ fit.ship_image_url }}" width="24" height="24"
+                   style="border-radius:3px;opacity:.9;flex-shrink:0" alt="">
+              <span>{{ fit.name }}</span>
+              {% if not fit.is_skill_plan %}
+                <span style="font-size:10px;color:var(--bs-secondary-color);font-family:monospace;margin-left:4px">v{{ fit.version }}</span>
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            {% if fit.is_skill_plan %}
+              <span class="badge badge-info">Skill Plan</span>
+            {% elif fit.role %}
+              <span class="badge badge-role">{{ fit.role }}</span>
+            {% else %}
+              <span style="color:var(--bs-secondary-color)">—</span>
+            {% endif %}
+          </td>
+          <td style="color:var(--bs-secondary-color)">
+            {% with tc=fit.tiers.all|length %}{{ tc }} tier{{ tc|pluralize }}{% endwith %}
+          </td>
+          <td>
+            <a href="{% url 'aa_fleet_hub:fit_edit' fit.id %}" class="fh-btn fh-btn-secondary">Edit</a>
+            <form method="post" action="{% url 'aa_fleet_hub:fit_duplicate' fit.id %}" style="display:inline">
+              {% csrf_token %}
+              <button type="submit" class="fh-btn fh-btn-info ms-1">Duplicate</button>
+            </form>
+            <a href="{% url 'aa_fleet_hub:fit_move_copy' fit.id %}" class="fh-btn fh-btn-secondary ms-1">Move/Copy →</a>
+            <a href="{% url 'aa_fleet_hub:fit_delete' fit.id %}" class="fh-btn fh-btn-danger ms-1">Remove</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" style="color:var(--bs-secondary-color);padding:12px">No fits yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Footer: group visibility -->
+    <div class="card-footer d-flex align-items-center gap-2 flex-wrap" style="font-size:12px">
+      <span style="color:var(--bs-secondary-color)">Visible to:</span>
+      {% if doctrine.public %}
+        <span class="badge-squad">All Members</span>
+      {% endif %}
+      {% for group in doctrine.groups.all %}
+        <span class="badge-squad">{{ group.name }}</span>
+      {% empty %}
+        {% if not doctrine.public %}
+          <span style="color:var(--bs-secondary-color);font-style:italic">Draft — no groups assigned</span>
+        {% endif %}
+      {% endfor %}
+      {% if doctrine.is_draft %}
+        <span class="badge bg-warning text-dark ms-1">Draft</span>
+      {% endif %}
+    </div>
+
+    </div>{# /.doctrine-body #}
+  </div>
+  {% endfor %}
+  </div>
+  {% endfor %}
+  {% if not doctrines %}
+    <div style="text-align:center;padding:60px 0;color:var(--bs-secondary-color)">No doctrines yet.</div>
+  {% endif %}
+
+  <!-- Archived Doctrines -->
+  {% if archived_doctrines %}
+  <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--bs-secondary-color);margin:24px 0 10px">
+    Archived Doctrines
+  </div>
+  {% for doctrine in archived_doctrines %}
+  <div class="card mb-2" style="opacity:.6">
+    <div class="card-header d-flex align-items-center">
+      <div style="font-size:13px;font-weight:600;color:var(--bs-secondary-color)">{{ doctrine.name }} {% include "aa_fleet_hub/partials/doctrine_tag.html" with doctrine=doctrine %}</div>
+      {% if can_manage_doctrines %}
+      <div class="ms-auto d-flex gap-2">
+        <form method="post" action="{% url 'aa_fleet_hub:doctrine_restore' doctrine.id %}" style="display:inline">
+          {% csrf_token %}
+          <button type="submit" class="fh-btn fh-btn-secondary">Restore</button>
+        </form>
+        <a href="{% url 'aa_fleet_hub:doctrine_delete' doctrine.id %}" class="fh-btn fh-btn-danger">Delete</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block fleet_js %}
+<script>
+document.querySelectorAll('[data-manage-collapse]').forEach(function(header) {
+  header.addEventListener('click', function() {
+    var body = document.getElementById(this.getAttribute('data-manage-collapse'));
+    if (!body) return;
+    var isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : '';
+    var arrow = this.querySelector('.doctrine-arrow');
+    if (arrow) arrow.classList.toggle('open', !isOpen);
+  });
+});
+</script>
+{% endblock %}

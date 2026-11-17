@@ -1,0 +1,317 @@
+{% extends 'aa_fleet_hub/base.html' %}
+{% load i18n static %}
+
+{% block page_title %}{% if structure %}Edit{% else %}New{% endif %} Fleet Structure{% endblock %}
+{% block nav_fleet_ops %}active{% endblock %}
+
+{% block fleet_content %}
+<div class="container-fluid">
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'aa_fleet_hub:fleet_ops_index' %}">Fleet Setup</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{% if structure %}Edit Fleet Structure: {{ structure.name }}{% else %}New Fleet Structure{% endif %}</li>
+    </ol>
+  </nav>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-title">{% if structure %}Edit: {{ structure.name }}{% else %}New Fleet Structure Template{% endif %}</div>
+    </div>
+    <div class="card-body">
+      <form id="fleet-structure-form" method="post" class="fleet-form" novalidate onsubmit="serializeStructure()">
+        {% csrf_token %}
+        <input type="hidden" name="structure" id="structure-hidden">
+
+        {% if error %}<div class="alert alert-danger mb-3">{{ error }}</div>{% endif %}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+          <div class="fh-form-group">
+            <label class="fh-form-label">Template Name</label>
+            <input type="text" name="name" class="form-control" required
+                   value="{{ structure.name|default:'' }}" placeholder="e.g. Ferox Fleet Standard">
+          </div>
+          {% if can_attach %}
+          <div class="fh-form-group">
+            <label class="fh-form-label">Link to Doctrine <span class="hint">(optional)</span></label>
+            <select name="doctrine_id" class="form-select">
+              <option value="">— Standalone (no doctrine) —</option>
+              {% for doctrine in doctrines %}
+                <option value="{{ doctrine.pk }}"
+                  {% if structure and structure.doctrine_id == doctrine.pk %}selected{% endif %}>
+                  {{ doctrine.name }}
+                </option>
+              {% endfor %}
+              {% if structure.doctrine and structure.doctrine not in doctrines %}
+                {# Linked to an inactive or archived doctrine: keep it selectable so saving doesn't unlink it. #}
+                <option value="{{ structure.doctrine_id }}" selected>{{ structure.doctrine.name }} (inactive)</option>
+              {% endif %}
+            </select>
+          </div>
+          {% elif structure.doctrine %}
+          <div class="fh-form-group">
+            <label class="fh-form-label">Doctrine</label>
+            <div style="font-size:13px">{{ structure.doctrine.name }}</div>
+            <span class="fh-form-hint">Linked by a doctrine manager. Only doctrine managers can change this.</span>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="fh-form-group">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+            <input type="checkbox" name="is_free_move" id="id_is_free_move"
+                   {% if structure and structure.is_free_move %}checked{% endif %}>
+            Free-Move
+            <span class="fh-form-label" style="font-weight:400;margin:0;color:var(--bs-secondary-color)">
+              — pilots can move themselves between squads
+            </span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;margin-top:8px">
+            <input type="checkbox" name="collapsed_by_default"
+                   {% if structure.collapsed_by_default or not structure %}checked{% endif %}>
+            Collapsed by default
+            <span class="fh-form-label" style="font-weight:400;margin:0;color:var(--bs-secondary-color)">
+              — wing/squad tree starts closed on the Manage and Fleet Setup pages until clicked open
+            </span>
+          </label>
+        </div>
+
+        <!-- EVE-like fleet structure builder -->
+        <div class="fh-form-label" style="margin-bottom:10px">Fleet Structure</div>
+        <div class="fleet-structure-builder" id="fleet-builder">
+          <!-- Fleet root -->
+          <div class="fs-fleet-root">
+            <div class="fs-fleet-label">
+              <span class="fs-icon">⚑</span>
+              <span style="font-size:13px;font-weight:600">Fleet</span>
+              <span id="wing-count-hint" class="fs-count-hint ms-auto"></span>
+              <button type="button" class="fh-btn fh-btn-secondary" onclick="addWing()">+ Add Wing</button>
+            </div>
+            <div id="wings-container"></div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button type="submit" class="fh-btn fh-btn-primary">
+            {% if structure %}Save Changes{% else %}Create Template{% endif %}
+          </button>
+          <a href="{% url 'aa_fleet_hub:fleet_ops_index' %}" class="fh-btn fh-btn-secondary">Cancel</a>
+        </div>
+      </form>
+      {% if structure %}
+      <form method="post" action="{% url 'aa_fleet_hub:structure_delete' structure.id %}" style="margin-top:14px"
+            onsubmit="return confirm('Delete the fleet structure {{ structure.name|escapejs }}?')">
+        {% csrf_token %}
+        <button type="submit" class="fh-btn fh-btn-secondary" style="color:#e05252">Delete Fleet Structure</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block fleet_js %}
+<style>
+.fleet-structure-builder {
+  background: rgba(0,0,0,.08);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 6px;
+  padding: 14px;
+}
+.fs-fleet-root {}
+.fs-fleet-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(77,157,224,.12);
+  border: 1px solid rgba(77,157,224,.25);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+.fs-icon { font-size: 14px; flex-shrink: 0; }
+.fs-wing {
+  margin-left: 20px;
+  margin-bottom: 6px;
+  border-left: 2px solid rgba(77,157,224,.3);
+  padding-left: 10px;
+}
+.fs-wing-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: rgba(128,128,128,.1);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+.fs-wing-name {
+  flex: 1;
+  background: rgba(128,128,128,.08);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 3px;
+  padding: 2px 6px;
+  color: var(--bs-body-color);
+  font-size: 12px;
+  font-weight: 600;
+  outline: none;
+  min-width: 0;
+}
+.fs-wing-name:focus { border-color: #4d9de0; }
+.fs-squads { margin-left: 20px; }
+.fs-squad {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(128,128,128,.06);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 4px;
+  margin-bottom: 3px;
+}
+.fs-squad-name {
+  flex: 1;
+  background: rgba(128,128,128,.08);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 3px;
+  padding: 2px 6px;
+  color: var(--bs-body-color);
+  font-size: 12px;
+  outline: none;
+  min-width: 0;
+}
+.fs-squad-name:focus { border-color: #4d9de0; }
+.fs-remove {
+  background: none;
+  border: none;
+  color: var(--bs-secondary-color);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.fs-remove:hover { color: #e05252; }
+.fs-add-squad {
+  font-size: 11px;
+  color: var(--bs-secondary-color);
+  background: none;
+  border: 1px dashed var(--bs-border-color);
+  border-radius: 4px;
+  padding: 3px 10px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  margin-bottom: 4px;
+}
+.fs-add-squad:hover { border-color: #4d9de0; color: #4d9de0; }
+.fs-count-hint { font-size: 11px; color: var(--bs-secondary-color); }
+.fs-count-hint.over { color: #e05252; }
+</style>
+
+<script>
+const EVE_MAX_WINGS = 25;
+const EVE_MAX_SQUADS = 25;
+let wingCount = 0;
+let restoring = true;
+
+function updateWingCount() {
+  const n = document.querySelectorAll('.fs-wing').length;
+  const hint = document.getElementById('wing-count-hint');
+  if (!hint) return;
+  hint.textContent = `${n} / ${EVE_MAX_WINGS} wings`;
+  hint.classList.toggle('over', n > EVE_MAX_WINGS);
+}
+
+function updateSquadCount(wingNum) {
+  const hint = document.getElementById(`squad-count-${wingNum}`);
+  if (!hint) return;
+  const n = document.getElementById(`squads-${wingNum}`).querySelectorAll('.fs-squad').length;
+  hint.textContent = `${n} / ${EVE_MAX_SQUADS}`;
+  hint.classList.toggle('over', n > EVE_MAX_SQUADS);
+}
+
+function addWing(name) {
+  if (!restoring && document.querySelectorAll('.fs-wing').length >= EVE_MAX_WINGS) {
+    alert(`EVE fleets support a maximum of ${EVE_MAX_WINGS} wings.`);
+    return;
+  }
+  wingCount++;
+  const wn = wingCount;
+  const container = document.getElementById('wings-container');
+  const div = document.createElement('div');
+  div.className = 'fs-wing';
+  div.dataset.wing = wn;
+  // Build with an empty value and assign the name via a DOM property below —
+  // interpolating it into this HTML string would let a quote in a saved wing
+  // name (e.g. `x" onmouseover="…`) break out of the attribute (stored XSS).
+  div.innerHTML = `
+    <div class="fs-wing-header">
+      <span class="fs-icon" style="color:#4d9de0">◈</span>
+      <input class="fs-wing-name" type="text" placeholder="Wing name (e.g. DPS Wing)">
+      <span id="squad-count-${wn}" class="fs-count-hint"></span>
+      <button type="button" class="fs-remove" onclick="removeWing(this)" title="Remove wing">✕</button>
+    </div>
+    <div class="fs-squads" id="squads-${wn}"></div>
+    <button type="button" class="fs-add-squad" onclick="addSquad(${wn})">+ Add Squad</button>`;
+  div.querySelector('.fs-wing-name').value = name || '';
+  container.appendChild(div);
+  updateWingCount();
+}
+
+function removeWing(btn) {
+  btn.closest('.fs-wing').remove();
+  updateWingCount();
+}
+
+function addSquad(wingNum, name) {
+  const container = document.getElementById(`squads-${wingNum}`);
+  if (!restoring && container.querySelectorAll('.fs-squad').length >= EVE_MAX_SQUADS) {
+    alert(`EVE fleets support a maximum of ${EVE_MAX_SQUADS} squads per wing.`);
+    return;
+  }
+  const div = document.createElement('div');
+  div.className = 'fs-squad';
+  // Same reasoning as addWing — assign the squad name via .value, not innerHTML interpolation.
+  div.innerHTML = `
+    <span class="fs-icon" style="color:var(--bs-secondary-color);font-size:11px">▸</span>
+    <input class="fs-squad-name" type="text" placeholder="Squad name (e.g. Alpha Squad)">
+    <button type="button" class="fs-remove" onclick="removeSquad(this, ${wingNum})" title="Remove squad">✕</button>`;
+  div.querySelector('.fs-squad-name').value = name || '';
+  container.appendChild(div);
+  updateSquadCount(wingNum);
+}
+
+function removeSquad(btn, wingNum) {
+  btn.closest('.fs-squad').remove();
+  updateSquadCount(wingNum);
+}
+
+function serializeStructure() {
+  const wings = [];
+  document.querySelectorAll('.fs-wing').forEach(wingEl => {
+    const name = wingEl.querySelector('.fs-wing-name').value.trim() || 'Wing';
+    const squads = Array.from(wingEl.querySelectorAll('.fs-squad-name'))
+      .map(i => i.value.trim() || 'Squad')
+      .filter(Boolean);
+    wings.push({ name, squads });
+  });
+  document.getElementById('structure-hidden').value = JSON.stringify(wings);
+}
+
+// Always clear on load (prevents browser state bleed)
+document.getElementById('wings-container').innerHTML = '';
+wingCount = 0;
+
+// Restore existing structure on edit
+{% if structure and structure.structure %}
+{% with wings=structure.wings %}
+{% for wing in wings %}
+addWing('{{ wing.name|escapejs }}');
+{% for squad in wing.squads %}
+addSquad(wingCount, '{{ squad|escapejs }}');
+{% endfor %}
+{% endfor %}
+{% endwith %}
+{% endif %}
+restoring = false;
+</script>
+{% endblock %}

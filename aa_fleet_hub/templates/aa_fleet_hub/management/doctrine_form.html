@@ -1,0 +1,257 @@
+{% extends 'aa_fleet_hub/base.html' %}
+{% load i18n static %}
+
+{% block page_title %}{% if doctrine %}Edit{% else %}New{% endif %} Doctrine{% endblock %}
+{% block nav_manage %}active{% endblock %}
+
+{% block fleet_content %}
+<div class="container-fluid">
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'aa_fleet_hub:manage_index' %}">Manage</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{% if doctrine %}Edit Doctrine: {{ doctrine.name }}{% else %}New Doctrine{% endif %}</li>
+    </ol>
+  </nav>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-title">{% if doctrine %}Edit Doctrine: {{ doctrine.name }}{% else %}New Doctrine{% endif %}</div>
+    </div>
+    <div class="card-body">
+      {% if error %}<div class="alert alert-danger mb-3">{{ error }}</div>{% endif %}
+      <form method="post" id="doctrine-form" class="fleet-form" novalidate>
+        {% csrf_token %}
+
+        <div class="fh-form-group">
+          <label class="fh-form-label">Sort Order <span class="hint">(lower = higher priority, 0 = top)</span></label>
+          <input type="number" name="sort_order" class="form-control"
+                 value="{{ doctrine.sort_order|default:0 }}" min="0" style="max-width:120px">
+          <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;margin-top:8px">
+            <input type="checkbox" name="pinned" {% if doctrine.pinned %}checked{% endif %}>
+            Pinned <span style="color:var(--bs-secondary-color)">(listed before every other doctrine, in a Pinned section at the top)</span>
+          </label>
+        </div>
+
+        <div class="fh-form-group">
+          <label class="fh-form-label">Name</label>
+          <input type="text" name="name" class="form-control" value="{{ doctrine.name|default:'' }}" required placeholder="e.g. Ferox Fleet">
+        </div>
+
+        <div class="fh-form-group">
+          <label class="fh-form-label">Tag <span class="hint">(free-form — suggestions provided)</span></label>
+          <input type="text" name="tag" id="fh-tag-name" class="form-control" list="tag-suggestions"
+                 value="{{ doctrine.tag|default:'' }}" placeholder="e.g. Active, Training, ISK Generation…">
+          {# Tag colour (#5): swatches and the colour box fill the hex field, which is what gets posted. #}
+          <div class="fh-tag-color" role="group" aria-label="Tag colour">
+            <span class="fh-tag-swatches">
+              {% for hex, label in tag_color_swatches %}
+                <button type="button" class="fh-tag-swatch" data-color="{{ hex }}" style="background:{{ hex }}"
+                        title="{{ label }}" aria-label="{{ label }}" aria-pressed="false"></button>
+              {% endfor %}
+            </span>
+            <input type="color" id="fh-tag-color-box" value="{{ tag_color }}" title="Pick any colour" aria-label="Pick any colour">
+            <input type="text" name="tag_color" id="fh-tag-color-hex" class="form-control fh-tag-hex"
+                   value="{{ tag_color }}" maxlength="7" spellcheck="false" autocomplete="off"
+                   pattern="#[0-9a-fA-F]{6}" placeholder="#3a7bd5" aria-label="Tag colour hex code"
+                   title="A hex code like #3a7bd5">
+            <span class="fh-tag-preview-label">Preview</span>
+            <span class="badge fh-doc-tag" id="fh-tag-preview" style="margin-left:0"></span>
+            <span class="fh-tag-preview-label" id="fh-tag-preview-empty" hidden>no tag, so no badge</span>
+          </div>
+          <div class="fh-tag-color-error" id="fh-tag-color-error" role="alert" hidden>Enter a hex code like #3a7bd5.</div>
+          <datalist id="tag-suggestions">
+            <option value="Active"><option value="Training"><option value="New Pilot">
+            <option value="ISK Generation"><option value="Deprecated">
+          </datalist>
+        </div>
+
+        <div class="fh-form-group">
+          <label class="fh-form-label">Description</label>
+          <input type="text" name="description" class="form-control"
+                 value="{{ doctrine.description|default:'' }}" placeholder="Short description shown on doctrine list">
+        </div>
+
+        <div class="fh-form-group">
+          <label class="fh-form-label">Requirements / Notes <span class="hint">(shown to all who can see this doctrine)</span></label>
+          <input type="text" name="notes" class="form-control"
+                 value="{{ doctrine.notes|default:'' }}" placeholder="e.g. Carry Nanite Paste, use Crystal implant set…">
+        </div>
+
+        <div class="fh-form-group">
+          <label class="fh-form-label">Visible to Groups</label>
+          <div class="fh-gp-wrap" id="gp-groups">
+            <div class="fh-gp-box">
+              <span class="fh-gp-tags"></span>
+              <input type="text" class="fh-gp-search" placeholder="Add group…" autocomplete="off">
+            </div>
+            <div class="fh-gp-dropdown"></div>
+          </div>
+          <span class="fh-form-hint">Members of selected groups will see this doctrine.</span>
+        </div>
+
+        <div class="fh-form-group">
+          <label class="fh-form-label">MOTD Visible To <span class="hint">(groups that can see and copy this doctrine's MOTDs)</span></label>
+          <span class="fh-form-hint">MOTDs are made and attached in <a href="{% url 'aa_fleet_hub:fleet_ops_index' %}#fh-motds">Fleet Setup</a>. A public MOTD is visible to all members regardless of these groups.</span>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;margin-top:6px">
+            <input type="checkbox" name="visible_to_all_members"
+                   {% if doctrine.visible_to_all_members or doctrine_default_visible and not doctrine %}checked{% endif %}>
+            Self-service: anyone can apply this doctrine's Fleet Structure to
+            their own fleet from the Doctrines page. Intended for doctrines
+            like Home Defence; make its MOTD public in Fleet Setup so members
+            can copy and push it too.
+          </label>
+          <div class="fh-gp-wrap" id="gp-motd-groups" style="margin-top:8px">
+            <div class="fh-gp-box">
+              <span class="fh-gp-tags"></span>
+              <input type="text" class="fh-gp-search" placeholder="Add group…" autocomplete="off">
+            </div>
+            <div class="fh-gp-dropdown"></div>
+          </div>
+        </div>
+
+        <div class="fh-form-group">
+          <label class="fh-form-label">Options</label>
+          <div style="display:flex;flex-direction:column;gap:5px;margin-top:4px">
+            <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer">
+              <input type="checkbox" name="active" {% if doctrine.active or not doctrine %}checked{% endif %}>
+              Active
+            </label>
+            <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer">
+              <input type="checkbox" name="is_draft" {% if doctrine.is_draft %}checked{% endif %}>
+              Work in Progress <span style="color:var(--bs-secondary-color)">(draft — hidden from members, visible to officers only)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer">
+              <input type="checkbox" name="public" {% if doctrine.public %}checked{% endif %}>
+              Visible to all members <span style="color:var(--bs-secondary-color)">(bypasses group gating)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer">
+              <input type="checkbox" name="collapsed_by_default" {% if doctrine.collapsed_by_default or not doctrine %}checked{% endif %}>
+              Collapsed by default <span style="color:var(--bs-secondary-color)">(card starts closed on the Doctrines and Manage pages until clicked open)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="fh-form-group">
+          <label class="fh-form-label">Shared Requirements</label>
+          <span class="fh-form-hint" style="margin-bottom:8px">Skills every pilot must have regardless of which ship they fly in this doctrine.</span>
+          <div class="skill-search-wrap" style="margin-bottom:8px">
+            <input type="text" class="form-control form-control-sm" id="shared-skill-search"
+                   placeholder="Search skill…" autocomplete="off"
+                   oninput="searchSkills(this,'shared-skill-drop',(id,name)=>{ addSkillTag(document.getElementById('shared-skill-tags'),id,name,4); })"
+                   onfocus="searchSkills(this,'shared-skill-drop',(id,name)=>{ addSkillTag(document.getElementById('shared-skill-tags'),id,name,4); })"
+                   onblur="setTimeout(()=>closeDropdown('shared-skill-drop'),150)">
+            <div id="shared-skill-drop" class="skill-dropdown"></div>
+          </div>
+          <div id="shared-skill-tags" class="skill-tags-wrap">
+            {% for ss in doctrine.shared_skills.all %}
+              <div class="skill-tag" data-type-id="{{ ss.skill_type_id }}">
+                <span class="skill-tag-name">{{ ss.skill_name }}</span>
+                <select class="skill-tag-level">
+                  {% for level in "12345" %}
+                    <option value="{{ level }}" {% if ss.required_level == level|add:0 %}selected{% endif %}>
+                      {% if level == "1" %}I{% elif level == "2" %}II{% elif level == "3" %}III{% elif level == "4" %}IV{% else %}V{% endif %}
+                    </option>
+                  {% endfor %}
+                </select>
+                <button type="button" class="skill-tag-remove" onclick="this.closest('.skill-tag').remove()">×</button>
+              </div>
+            {% endfor %}
+          </div>
+          <input type="hidden" name="shared_skills" id="shared-skills-hidden">
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:6px">
+          <button type="submit" class="fh-btn fh-btn-primary" onclick="serializeSharedSkills()">
+            {% if doctrine %}Save Changes{% else %}Create Doctrine{% endif %}
+          </button>
+          <a href="{% url 'aa_fleet_hub:manage_index' %}" class="fh-btn fh-btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block fleet_js %}
+<script>
+window.FLEET_SKILL_AC_URL    = "{% url 'aa_fleet_hub:autocomplete_skills' %}";
+window.FLEET_SKILL_EXACT_URL = "{% url 'aa_fleet_hub:autocomplete_skill_exact' %}";
+window.FLEET_SHIP_AC_URL  = "{% url 'aa_fleet_hub:autocomplete_ships' %}";
+
+function serializeSharedSkills() {
+  const tags = document.querySelectorAll('#shared-skill-tags .skill-tag');
+  const data = Array.from(tags).map(t => ({
+    type_id: parseInt(t.dataset.typeId || t.dataset.typeid || t.getAttribute('data-type-id')),
+    level: parseInt(t.querySelector('.skill-tag-level').value),
+  }));
+  document.getElementById('shared-skills-hidden').value = JSON.stringify(data);
+}
+
+// ---------------------------------------------------------------------------
+// Tag colour (#5). Same contrast rule as Doctrine.tag_text_color; the server
+// validates the hex again on save.
+// ---------------------------------------------------------------------------
+
+function fhTagTextColor(hex) {
+  const lin = c => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  const [r, g, b] = [1, 3, 5].map(i => lin(parseInt(hex.slice(i, i + 2), 16) / 255));
+  const bg = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return (bg + 0.05) / 0.05 >= 1.05 / (bg + 0.05) ? '#000000' : '#ffffff';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const hexInput = document.getElementById('fh-tag-color-hex');
+  if (!hexInput) return;
+  const box = document.getElementById('fh-tag-color-box');
+  const preview = document.getElementById('fh-tag-preview');
+  const tagName = document.getElementById('fh-tag-name');
+  const swatches = document.querySelectorAll('.fh-tag-swatch');
+  const previewEmpty = document.getElementById('fh-tag-preview-empty');
+  const colorError = document.getElementById('fh-tag-color-error');
+
+  function isValid() { return /^#[0-9a-f]{6}$/.test(hexInput.value.trim().toLowerCase()); }
+
+  function render() {
+    const hex = hexInput.value.trim().toLowerCase();
+    const valid = isValid();
+    hexInput.classList.toggle('is-invalid', !valid);
+    colorError.hidden = valid;
+    swatches.forEach(s => s.setAttribute('aria-pressed', String(valid && s.dataset.color === hex)));
+    // Like the real pages: no tag, no badge.
+    const tag = tagName.value.trim();
+    preview.textContent = tag;
+    preview.hidden = !tag;
+    previewEmpty.hidden = !!tag;
+    if (!valid) return;
+    box.value = hex;
+    preview.style.background = hex;
+    preview.style.color = fhTagTextColor(hex);
+  }
+
+  function setColor(hex) { hexInput.value = hex; render(); }
+
+  swatches.forEach(s => s.addEventListener('click', () => setColor(s.dataset.color)));
+  box.addEventListener('input', () => setColor(box.value));
+  hexInput.addEventListener('input', render);
+  tagName.addEventListener('input', render);
+  // A server rejection reloads the form without the other fields, so catch a
+  // bad hex here first. The server still checks it on save.
+  document.getElementById('doctrine-form').addEventListener('submit', e => {
+    if (isValid()) return;
+    e.preventDefault();
+    hexInput.focus();
+    hexInput.select();
+  });
+  render();
+});
+
+
+</script>
+{{ all_groups_data|json_script:"fh-all-groups" }}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const allGroups = JSON.parse(document.getElementById('fh-all-groups').textContent);
+  initGroupPicker('gp-groups',      allGroups, {{ selected_group_ids|safe }},      'groups');
+  initGroupPicker('gp-motd-groups', allGroups, {{ selected_motd_group_ids|safe }}, 'motd_groups');
+});
+</script>
+{% endblock %}

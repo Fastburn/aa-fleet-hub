@@ -1,0 +1,85 @@
+{% extends 'aa_fleet_hub/base.html' %}
+{% load i18n static %}
+
+{% block page_title %}{% if motd %}Edit{% else %}New{% endif %} MOTD{% endblock %}
+{% block nav_fleet_ops %}active{% endblock %}
+
+{% block fleet_content %}
+<div class="container-fluid">
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'aa_fleet_hub:fleet_ops_index' %}">Fleet Setup</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{% if motd %}Edit MOTD: {{ motd.name }}{% else %}New MOTD{% endif %}</li>
+    </ol>
+  </nav>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-title">{% if motd %}Edit MOTD: {{ motd.name }}{% else %}New MOTD{% endif %}</div>
+    </div>
+    <div class="card-body">
+      {% if error %}<div class="alert alert-danger mb-3">{{ error }}</div>{% endif %}
+      <form method="post" id="motd-form" class="fleet-form" novalidate>
+        {% csrf_token %}
+
+        <div class="fh-form-group">
+          <label class="fh-form-label" for="motd-name">Name</label>
+          <input type="text" name="name" id="motd-name" class="form-control" maxlength="100" required
+                 value="{{ form.name|default:'' }}" placeholder="e.g. Home Defence (Roaming)">
+        </div>
+
+        <div class="fh-form-group">
+          <label class="fh-form-label">MOTD <span class="hint">(EVE markup, saved exactly as written)</span></label>
+          {% include "aa_fleet_hub/partials/motd_editor.html" with field_name="text" value=form.text %}
+        </div>
+
+        {% if can_attach %}
+        <div class="fh-form-group">
+          <label class="fh-form-label" for="motd-doctrine">Doctrine <span class="hint">(optional)</span></label>
+          <select name="doctrine_id" id="motd-doctrine" class="form-select" style="max-width:420px">
+            <option value="">Standalone (no doctrine)</option>
+            {% for doctrine in doctrines %}
+              <option value="{{ doctrine.pk }}" {% if motd.doctrine_id == doctrine.pk %}selected{% endif %}>{{ doctrine.name }}</option>
+            {% endfor %}
+            {% if motd.doctrine and motd.doctrine not in doctrines %}
+              {# Attached to an inactive or archived doctrine: keep it selectable so saving doesn't detach it. #}
+              <option value="{{ motd.doctrine_id }}" selected>{{ motd.doctrine.name }} (inactive)</option>
+            {% endif %}
+          </select>
+          <div style="display:flex;flex-direction:column;gap:5px;margin-top:8px">
+            <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer">
+              <input type="checkbox" name="is_default" {% if motd.is_default and motd.doctrine_id %}checked{% endif %}>
+              Default <span style="color:var(--bs-secondary-color)">(the doctrine's quick-use MOTD; replaces its current default)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer">
+              <input type="checkbox" name="public" {% if motd.is_public %}checked{% endif %}>
+              Public <span style="color:var(--bs-secondary-color)">(visible to all members who can see the doctrine, like Home Defence)</span>
+            </label>
+          </div>
+          <span class="fh-form-hint">Default and public only apply while the MOTD is attached to a doctrine. Otherwise it follows the doctrine's "MOTD Visible To" groups.</span>
+        </div>
+        {% elif motd.doctrine %}
+        <div class="fh-form-group">
+          <label class="fh-form-label">Doctrine</label>
+          <div style="font-size:13px">
+            {{ motd.doctrine.name }}{% if motd.is_default %} · default{% endif %}{% if motd.is_public %} · public{% endif %}
+          </div>
+          <span class="fh-form-hint">Attached by a doctrine manager. Only doctrine managers can change this.</span>
+        </div>
+        {% endif %}
+
+        <div style="display:flex;gap:10px;margin-top:6px">
+          <button type="submit" class="fh-btn fh-btn-primary">{% if motd %}Save Changes{% else %}Create MOTD{% endif %}</button>
+          <a href="{% url 'aa_fleet_hub:fleet_ops_index' %}" class="fh-btn fh-btn-secondary">Cancel</a>
+        </div>
+      </form>
+      {% if motd %}
+      <form method="post" action="{% url 'aa_fleet_hub:motd_delete' motd.pk %}" style="margin-top:14px"
+            onsubmit="return confirm('Delete the MOTD {{ motd.name|escapejs }}?')">
+        {% csrf_token %}
+        <button type="submit" class="fh-btn fh-btn-secondary" style="color:#e05252">Delete MOTD</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

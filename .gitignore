@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+aa_fleet_hub.egg-info/
+
+# Test / CI
+.tox/
+.pytest_cache/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+staticfiles/
+media/
+
+# Alliance Auth local config
+aa_dev/*/settings/local.py
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets / env
+.env
+.env.*
+
+# Local planning doc, not for the repo
+plan.md
+
+# Local design mockups, not for the repo
+mockups/

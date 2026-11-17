@@ -1,0 +1,226 @@
+{% comment %}
+MOTD editor: toolbar, textarea and live preview (#3).
+Pass field_name (the textarea's form name) and value (the saved text).
+Needs motd_quick_links in the context for the Quick Links menu.
+The newline right after <textarea> is dropped by the browser, so a leading
+newline in the text itself survives a re-save. Do not remove it.
+{% endcomment %}
+<!-- Toolbar -->
+<div class="motd-toolbar" id="motd-toolbar">
+  <select id="motd-size" class="motd-tb-btn" title="Font size" style="padding:2px 4px;cursor:pointer">
+    <option value="11">11</option>
+    <option value="12">12</option>
+    <option value="13" selected>13</option>
+    <option value="14">14</option>
+    <option value="16">16</option>
+    <option value="18">18</option>
+    <option value="20">20</option>
+  </select>
+  <button type="button" class="motd-tb-btn" title="Apply font size" onclick="motdApplySize()">Size</button>
+  <span class="motd-tb-sep"></span>
+  <button type="button" class="motd-tb-btn" title="Bold" onclick="motdWrap('<b>','</b>')"><b>B</b></button>
+  <button type="button" class="motd-tb-btn" title="Underline" onclick="motdWrap('<u>','</u>')"><u>U</u></button>
+  <button type="button" class="motd-tb-btn" title="Italic" onclick="motdWrap('<i>','</i>')"><i>I</i></button>
+  <span class="motd-tb-sep"></span>
+  <input type="color" id="motd-color-pick" value="#ffffff" title="Text colour"
+         class="motd-tb-color" onchange="motdApplyColor(this.value)">
+  <button type="button" class="motd-tb-btn" onclick="motdApplyColor(document.getElementById('motd-color-pick').value)">Color</button>
+  <span class="motd-tb-sep"></span>
+  <button type="button" class="motd-tb-btn" title="Line break" onclick="motdInsert('<br>')">↵</button>
+  <button type="button" class="motd-tb-btn" title="Double line break" onclick="motdInsert('<br><br>')">↵↵</button>
+  <button type="button" class="motd-tb-btn" title="Divider line" onclick="motdInsert('<br>-----------------------------------------------------------<br>')">—</button>
+  <span class="motd-tb-sep"></span>
+  <button type="button" class="motd-tb-btn" onclick="motdInsertLink()">🔗 Link</button>
+  <button type="button" class="motd-tb-btn" onclick="motdInsertChannel()">📡 Channel</button>
+  {% if motd_quick_links %}
+  <select class="motd-tb-btn" style="padding:2px 4px;cursor:pointer"
+          onchange="motdInsertQuickLink(this); this.selectedIndex=0;">
+    <option value="">🔖 Quick Links…</option>
+    {% for ql in motd_quick_links %}
+    <option value="{{ forloop.counter }}" data-url="{{ ql.url }}" data-text="{{ ql.link_text }}">{{ ql.label }}</option>
+    {% endfor %}
+  </select>
+  {% endif %}
+  <span class="motd-tb-sep"></span>
+  <button type="button" class="motd-tb-btn" style="color:#4d9de0" onclick="motdTogglePreview()">👁 Preview</button>
+</div>
+
+<!-- Editor + Preview side by side -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+  <textarea id="motd-editor" name="{{ field_name }}" class="form-control" rows="10"
+            style="background:#2a2d32;color:#e2e8f0;border-color:#444;font-family:monospace;font-size:12px"
+            placeholder="Paste EVE MOTD markup here, or use the toolbar to build it."
+            oninput="motdUpdatePreview()">
+{{ value|default:'' }}</textarea>
+  <div id="motd-preview" class="motd-preview">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:6px">Preview</div>
+    <div id="motd-preview-content" class="motd-preview-content"></div>
+  </div>
+</div>
+<script>
+// ---------------------------------------------------------------------------
+// MOTD editor
+// ---------------------------------------------------------------------------
+
+function motdEditor() { return document.getElementById('motd-editor'); }
+
+function motdWrap(open, close) {
+  const ta = motdEditor();
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  const sel = ta.value.substring(start, end);
+  ta.value = ta.value.substring(0, start) + open + sel + close + ta.value.substring(end);
+  ta.selectionStart = start + open.length;
+  ta.selectionEnd = start + open.length + sel.length;
+  ta.focus();
+  motdUpdatePreview();
+}
+
+function motdInsert(text) {
+  const ta = motdEditor();
+  const pos = ta.selectionStart;
+  ta.value = ta.value.substring(0, pos) + text + ta.value.substring(pos);
+  ta.selectionStart = ta.selectionEnd = pos + text.length;
+  ta.focus();
+  motdUpdatePreview();
+}
+
+function motdApplyColor(hex) {
+  // Convert #rrggbb to EVE's #ffrrggbb format (ff = fully opaque)
+  const eveColor = '#ff' + hex.replace('#', '');
+  const size = document.getElementById('motd-size').value;
+  motdWrap(`<font size="${size}" color="${eveColor}">`, '</font>');
+}
+
+function motdApplySize() {
+  const size = document.getElementById('motd-size').value;
+  motdWrap(`<font size="${size}">`, '</font>');
+}
+
+function motdInsertQuickLink(select) {
+  // Autoescaped data- attributes give back the exact URL and text, even
+  // with &, quotes or | in them.
+  const opt = select.selectedOptions[0];
+  if (!opt || !opt.value) return;
+  motdInsert(`<a href="${opt.dataset.url}">${opt.dataset.text}</a>`);
+}
+
+function motdInsertLink() {
+  const url = prompt('URL (e.g. https://discord.gg/...)');
+  if (!url) return;
+  const label = prompt('Link text', url);
+  if (!label) return;
+  motdInsert(`<a href="${url}">${label}</a>`);
+}
+
+function motdInsertChannel() {
+  const channelId = prompt('Channel ID (from the joinChannel: link)');
+  if (!channelId) return;
+  const label = prompt('Channel label');
+  if (!label) return;
+  motdInsert(`<a href="joinChannel:player_${channelId}">${label}</a>`);
+}
+
+function motdTogglePreview() {
+  const preview = document.getElementById('motd-preview');
+  preview.style.display = preview.style.display === 'none' ? '' : 'none';
+}
+
+// EVE colours are #AARRGGBB; #RRGGBB is taken as opaque.
+function motdColor(value) {
+  const hex = (value || '').replace(/^#|^0x/i, '');
+  if (!/^[0-9a-f]{6}([0-9a-f]{2})?$/i.test(hex)) return null;
+  const argb = hex.length === 8 ? hex : 'ff' + hex;
+  const n = i => parseInt(argb.slice(i, i + 2), 16);
+  return `rgba(${n(2)}, ${n(4)}, ${n(6)}, ${(n(0) / 255).toFixed(2)})`;
+}
+
+function motdDecode(text) {
+  const named = {lt: '<', gt: '>', amp: '&', quot: '"', apos: "'", nbsp: '\u00a0'};
+  return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, ent) => {
+    if (ent[0] !== '#') return named[ent.toLowerCase()] ?? whole;
+    const code = ent[1].toLowerCase() === 'x' ? parseInt(ent.slice(2), 16) : parseInt(ent.slice(1), 10);
+    return code > 0 && code < 0x110000 ? String.fromCodePoint(code) : whole;
+  });
+}
+
+// Parse EVE MOTD markup into a tree: strings, or {tag, style, title, children}.
+// Unknown tags (e.g. <loc>) are dropped but their text kept; a "<" or ">"
+// that isn't part of a tag is plain text, as in game.
+function motdParse(raw) {
+  const root = {tag: 'root', children: []};
+  const stack = [root];
+  const top = () => stack[stack.length - 1];
+  const open = node => { node.children = []; top().children.push(node); stack.push(node); };
+  const attr = (body, name) => {
+    const m = body.match(new RegExp(name + '\\s*=\\s*(?:"([^"]*)"|\'([^\']*)\'|([^\\s>]+))', 'i'));
+    return m ? (m[1] ?? m[2] ?? m[3]) : null;
+  };
+  const close = tag => {
+    const at = stack.map(n => n.tag).lastIndexOf(tag);
+    if (at < 1) return;  // nothing open to close: ignore, like EVE's stray </font>
+    const reopen = stack.splice(at).slice(1);
+    // Formatting closed out of order (<b><u>..</b>) carries on, as browsers do.
+    reopen.forEach(n => open({tag: n.tag, style: n.style, title: n.title}));
+  };
+  // A raw newline (CRLF, CR or LF) is a line break in game, same as <br>.
+  const text = chunk => chunk.split(/\r\n|\r|\n/).forEach((line, i) => {
+    if (i) top().children.push({tag: 'br', children: []});
+    if (line) top().children.push(motdDecode(line));
+  });
+  const re = /<(\/?)([a-z]+)\b([^<>]*)>/gi;
+  let last = 0, m;
+  while ((m = re.exec(raw))) {
+    if (m.index > last) text(raw.slice(last, m.index));
+    last = re.lastIndex;
+    const [, slash, name, body] = m;
+    const tag = name.toLowerCase();
+    if (tag === 'br') { top().children.push({tag: 'br', children: []}); continue; }
+    if (!['font', 'b', 'i', 'u', 'a'].includes(tag)) continue;
+    if (slash) { close(tag); continue; }
+    if (tag === 'font') {
+      const style = {};
+      const size = parseInt(attr(body, 'size'), 10);
+      // In game, size 14 looks the same as untagged text, so it maps to the
+      // preview's 13px base and other sizes scale from there.
+      if (size > 0) style.fontSize = Math.round(size * 13 / 14) + 'px';
+      const color = motdColor(attr(body, 'color'));
+      if (color) style.color = color;
+      open({tag, style});
+    } else if (tag === 'a') {
+      // Inside a coloured <font> a link takes that colour, as in game.
+      const tinted = stack.some(n => n.style && n.style.color);
+      open({tag, title: motdDecode(attr(body, 'href') || ''), style: tinted ? {color: 'inherit'} : null});
+    } else {
+      open({tag});
+    }
+  }
+  if (last < raw.length) text(raw.slice(last));
+  return root.children;
+}
+
+function motdRender(nodes, parent) {
+  nodes.forEach(node => {
+    if (typeof node === 'string') { parent.appendChild(document.createTextNode(node)); return; }
+    const el = document.createElement(node.tag === 'font' ? 'span' : node.tag);
+    if (node.style) Object.assign(el.style, node.style);
+    if (node.tag === 'a') {
+      el.href = '#';
+      el.title = node.title;
+      el.addEventListener('click', e => e.preventDefault());
+    }
+    motdRender(node.children, el);
+    parent.appendChild(el);
+  });
+}
+
+function motdUpdatePreview() {
+  const target = document.getElementById('motd-preview-content');
+  target.replaceChildren();
+  motdRender(motdParse(motdEditor().value), target);
+}
+
+// Init preview on load
+document.addEventListener('DOMContentLoaded', () => {
+  if (motdEditor() && motdEditor().value) motdUpdatePreview();
+});
+</script>

@@ -1,0 +1,2 @@
+{# Doctrine tag badge (#5), the same on every page. tag_color_hex is always a valid #rrggbb, tag_text_color is black or white for at least 4.5:1 contrast. #}
+{% if doctrine.tag %}<span class="badge fh-doc-tag" style="background:{{ doctrine.tag_color_hex }};color:{{ doctrine.tag_text_color }}">{{ doctrine.tag }}</span>{% endif %}

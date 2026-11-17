@@ -1,0 +1,20 @@
+{% extends 'aa_fleet_hub/base.html' %}
+
+{% block page_title %}Remove Fit{% endblock %}
+{% block nav_manage %}active{% endblock %}
+
+{% block fleet_content %}
+<div class="container-fluid">
+  <div class="card">
+    <div class="card-header"><h5 class="mb-0">Remove Fit</h5></div>
+    <div class="card-body">
+      <p>Remove <strong>{{ fit.name }}</strong> from <strong>{{ fit.doctrine.name }}</strong>? All tiers and skill requirements for this fit will be deleted.</p>
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="fh-btn fh-btn-danger">Remove</button>
+        <a href="{% url 'aa_fleet_hub:manage_index' %}" class="fh-btn fh-btn-secondary ms-2">Cancel</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,164 @@
+{% extends 'aa_fleet_hub/base.html' %}
+{% load i18n static %}
+
+{% block page_title %}{{ doctrine.name }} readiness{% endblock %}
+{% block nav_fleet_command %}active{% endblock %}
+
+{% block fleet_content %}
+<div class="container-fluid">
+
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'aa_fleet_hub:readiness_index' %}">Fleet Command</a></li>
+      <li class="breadcrumb-item active">{{ doctrine.name }} {% include "aa_fleet_hub/partials/doctrine_tag.html" with doctrine=doctrine %}</li>
+    </ol>
+  </nav>
+
+  {% if not doctrine_data %}
+    <div class="alert alert-info">Readiness data not yet computed. Check back shortly.</div>
+  {% else %}
+
+  {# Page-wide row filters, remembered per user. Hidden rows are left out by the server. #}
+  <div class="fc-filter-bar">
+    <span class="fc-filter-state">
+      Showing {% if hide_alts %}mains only{% else %}mains and alts{% endif %},
+      {% if hide_cant_fly %}who can fly each fit{% else %}including who can't fly{% endif %}.
+    </span>
+    <form method="post" action="{% url 'aa_fleet_hub:readiness_filter_toggle' %}">
+      {% csrf_token %}
+      <input type="hidden" name="filter" value="alts">
+      <input type="hidden" name="hide" value="{{ hide_alts|yesno:'0,1' }}">
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <button type="submit" class="fh-btn fh-btn-secondary">{% if hide_alts %}Show alts{% else %}Hide alts{% endif %}</button>
+    </form>
+    <form method="post" action="{% url 'aa_fleet_hub:readiness_filter_toggle' %}">
+      {% csrf_token %}
+      <input type="hidden" name="filter" value="cant_fly">
+      <input type="hidden" name="hide" value="{{ hide_cant_fly|yesno:'0,1' }}">
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <button type="submit" class="fh-btn fh-btn-secondary">{% if hide_cant_fly %}Show who can't fly{% else %}Hide who can't fly{% endif %}</button>
+    </form>
+  </div>
+
+  <div style="font-size:11px;color:var(--bs-secondary-color);margin-bottom:10px">
+    {{ doctrine_data.total }} characters{% if doctrine_data.pilot_total is not None %} · {{ doctrine_data.pilot_total }} pilots (each pilot counted once, at the best tier any of their characters reaches){% endif %}.
+    Click a fit to see its pilots. {% if not hide_alts %}<span class="fc-alt-indent">&#8627;</span> marks an alt, grouped under its main.{% endif %}
+  </div>
+
+  {% for fit in doctrine_data.fits %}
+  <details class="card mb-3 fc-fit" id="fit-{{ fit.fit_id }}">
+    <summary class="fc-fit-summary">
+      <div class="fc-fit-title">
+        <span class="doctrine-arrow" aria-hidden="true">&#9654;&#xFE0E;</span>
+        <h2 class="fc-fit-name">{{ fit.fit_name }}</h2>
+      </div>
+      <div class="fc-fit-tiers">
+        {% for t in fit.display_tiers %}
+        <div class="fc-fit-tier">
+          <span class="fc-fit-tier-num" style="color:{{ t.color }}">{{ t.count }}</span>
+          <span class="fc-fit-tier-lbl">{{ t.label }}</span>
+          {% if t.pilots is not None %}<span class="fc-fit-tier-pilots">{{ t.pilots }} pilot{{ t.pilots|pluralize }}</span>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% if fit.no_skill_plan %}
+      <div class="fc-fit-warn">No skill plan set up for this ship. Readiness can't be tracked until skill tiers are added.</div>
+      {% elif fit.gap_analysis %}
+      <div class="fc-fit-gaps">
+        <span class="fc-fit-gaps-lbl">Most common missing skills</span>
+        {% for gap in fit.gap_analysis %}
+        <span class="fc-fit-gap">{{ gap.name }} <span class="fc-fit-gap-lvl">Lv {{ gap.level }}</span> <span class="fc-fit-gap-count">{{ gap.count }} char{{ gap.count|pluralize }}</span></span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </summary>
+
+    {% if fit.per_char %}
+    <table class="manage-table fc-readiness-table">
+      <thead>
+        <tr>
+          <th style="width:32px"></th>
+          <th class="fc-sort-hdr" data-sort="name" style="cursor:pointer">Character &#8597;</th>
+          <th class="fc-sort-hdr" data-sort="corp" style="cursor:pointer">Corporation &#8597;</th>
+          <th class="fc-sort-hdr" data-sort="status" style="cursor:pointer">Status &#8597;</th>
+          {% if can_view_assets %}
+          <th>Ship in Hangar</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for char in fit.per_char %}
+        <tr data-user="{{ char.user_id|default:'' }}" data-main="{{ char.is_main|yesno:'1,0' }}"
+            data-name="{{ char.character_name }}" data-corp="{{ char.corp }}"
+            data-status-rank="{% if fit.no_skill_plan %}-1{% elif char.bucket == 'max' %}4{% elif char.bucket == 'rec' %}3{% elif char.bucket == 'min' %}2{% else %}1{% endif %}"
+            class="{% if not char.is_main and char.user_id %}fc-alt-row{% endif %}">
+          <td>
+            <img src="https://images.evetech.net/characters/{{ char.character_id }}/portrait?size=32"
+                 width="24" height="24" style="border-radius:50%;opacity:.9"
+                 onerror="this.style.display='none'" alt="" loading="lazy">
+          </td>
+          <td>{% if not char.is_main and char.user_id %}<span class="fc-alt-indent">&#8627;</span>{% endif %}{{ char.character_name }}</td>
+          <td style="color:var(--bs-secondary-color)">{{ char.corp }}</td>
+          <td>
+            {% if fit.no_skill_plan %}
+              <span class="badge badge-far">No Skill Plan</span>
+            {% elif char.bucket == "max" %}
+              <span class="badge badge-ready">{{ char.best_tier }}</span>
+            {% elif char.bucket == "rec" %}
+              <span class="badge badge-close">{{ char.best_tier }}</span>
+            {% elif char.bucket == "min" %}
+              <span class="badge badge-training">{{ char.best_tier }}</span>
+            {% else %}
+              <span class="badge badge-far">Not yet</span>
+            {% endif %}
+          </td>
+          {% if can_view_assets %}
+          <td style="color:var(--bs-secondary-color);font-size:12px">
+            {% if char.owned_hulls %}{{ char.owned_hulls|join:", " }}{% else %}<span style="opacity:.5">None</span>{% endif %}
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="fc-fit-empty">No characters to show with the current filters.</div>
+    {% endif %}
+
+    {% if fit.hidden_alts or fit.hidden_cant_fly %}
+    <div class="fc-fit-hidden">
+      {% if fit.hidden_cant_fly %}
+      <form method="post" action="{% url 'aa_fleet_hub:readiness_filter_toggle' %}">
+        {% csrf_token %}
+        <input type="hidden" name="filter" value="cant_fly">
+        <input type="hidden" name="hide" value="0">
+        <input type="hidden" name="next" value="{{ request.path }}#fit-{{ fit.fit_id }}">
+        <button type="submit" class="fh-btn fh-btn-secondary">Show {{ fit.hidden_cant_fly }} who can't fly</button>
+      </form>
+      {% endif %}
+      {% if fit.hidden_alts %}
+      <form method="post" action="{% url 'aa_fleet_hub:readiness_filter_toggle' %}">
+        {% csrf_token %}
+        <input type="hidden" name="filter" value="alts">
+        <input type="hidden" name="hide" value="0">
+        <input type="hidden" name="next" value="{{ request.path }}#fit-{{ fit.fit_id }}">
+        <span>{{ fit.hidden_alts }} alt{{ fit.hidden_alts|pluralize }} hidden</span>
+        <button type="submit" class="fh-btn fh-btn-secondary">Show alts</button>
+      </form>
+      {% endif %}
+      <span class="fc-fit-hidden-note">Applies to every fit.</span>
+    </div>
+    {% endif %}
+  </details>
+  {% empty %}
+    {% if has_fits %}
+      <div style="font-size:12px;color:var(--bs-secondary-color)">No skill requirements set up yet — add skill tiers to this doctrine's fits to track readiness here.</div>
+    {% else %}
+      <div style="font-size:12px;color:var(--bs-secondary-color)">No fits in this doctrine.</div>
+    {% endif %}
+  {% endfor %}
+
+  {% endif %}
+
+</div>
+{% endblock %}

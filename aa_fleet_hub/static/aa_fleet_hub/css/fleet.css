@@ -1,0 +1,1128 @@
+/* -----------------------------------------------------------------------
+   Fleet Hub — fleet.css
+   Pip semantic colors are hardcoded (intentional, not subject to theme).
+   Everything structural uses Bootstrap CSS variables so it adapts to any
+   Alliance Auth theme (light or dark).
+----------------------------------------------------------------------- */
+
+/* ── Fleet Hub action buttons (match mockup semi-transparent style) ── */
+.fh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity .1s;
+}
+.fh-btn:hover { opacity: .8; text-decoration: none; }
+.fh-btn-secondary {
+  background: rgba(128,128,128,.25);
+  color: var(--bs-body-color);
+  border-color: rgba(128,128,128,.35);
+}
+.fh-btn-danger {
+  background: rgba(224,82,82,.15);
+  color: #e05252;
+  border-color: rgba(224,82,82,.3);
+}
+.fh-btn-success {
+  background: rgba(76,175,107,.15);
+  color: #4caf6b;
+  border-color: rgba(76,175,107,.3);
+}
+.fh-btn-info {
+  background: rgba(77,157,224,.15);
+  color: #4d9de0;
+  border-color: rgba(77,157,224,.3);
+}
+.fh-btn-primary {
+  background: #4d9de0;
+  color: #fff;
+  border-color: #4d9de0;
+}
+
+/* ── Pips ── */
+.pips { display: flex; gap: 2px; }
+.pip {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  border: 1px solid rgba(128,128,128,0.4);
+  background: rgba(128,128,128,0.2);
+  display: inline-block;
+}
+.pip.have    { background: #4caf6b;               border-color: #4caf6b; }
+.pip.exceed  { background: transparent;            border-color: rgba(76,175,107,.5); }
+.pip.short   { background: #c8a84b;               border-color: #c8a84b; }
+.pip.unmet   { background: rgba(224,82,82,.25);   border-color: rgba(224,82,82,.6); }
+.pip.queued  { background: rgba(77,157,224,.30);  border-color: #4d9de0; }
+.pip.neutral { background: rgba(128,128,128,0.2); border-color: rgba(128,128,128,0.4); }
+.pip.target  { box-shadow: 0 0 0 1.5px rgba(255,255,255,.55); }
+
+/* ── All fleet hub badges — pill shape, uppercase, matching mockup ── */
+.badge-ready,
+.badge-close,
+.badge-training,
+.badge-far,
+.badge-active,
+.badge-info,
+.badge-role {
+  border-radius: 999px !important;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-size: 10px !important;
+  font-weight: 700;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.badge-ready    { background: rgba(76,175,107,.15);  color: #4caf6b;  border: none; }
+.badge-close    { background: rgba(200,168,75,.22);  color: #9c7a1f;  border: none; }
+.badge-training { background: rgba(230,126,34,.22);  color: #b85f0e;  border: none; }
+.badge-far      { background: rgba(224,82,82,.15);   color: #e05252;  border: none; }
+
+.fc-alt-row       { background: rgba(128,128,128,.03); }
+.fc-alt-indent    { color: var(--bs-secondary-color); margin-right: 4px; }
+.fc-sort-hdr:hover { color: var(--bs-body-color); }
+
+/* Fleet Command doctrine page: collapsible fit cards + row filters */
+.fc-filter-bar    { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.fc-filter-state  { font-size: 12px; color: var(--bs-body-color); margin-right: 4px; }
+.fc-fit > summary { list-style: none; cursor: pointer; padding: 10px 16px; }
+.fc-fit > summary::-webkit-details-marker { display: none; }
+.fc-fit > summary:hover { background: rgba(128,128,128,.05); }
+.fc-fit > summary:focus-visible { outline: 2px solid #4d9de0; outline-offset: -2px; }
+.fc-fit[open] > summary { border-bottom: 1px solid var(--bs-border-color); }
+.fc-fit[open] > summary .doctrine-arrow { transform: rotate(90deg); }
+.fc-fit-title     { display: flex; align-items: center; gap: 8px; }
+.fc-fit-name      { font-size: 13px; font-weight: 600; margin: 0; }
+.fc-fit-tiers     { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 6px 0 0 18px; }
+.fc-fit-tier      { display: flex; align-items: baseline; gap: 5px; font-size: 11px; }
+.fc-fit-tier-num  { font-size: 15px; font-weight: 700; }
+.fc-fit-tier-lbl  { color: var(--bs-body-color); }
+.fc-fit-tier-pilots { color: var(--bs-secondary-color); }
+.fc-fit-gaps      { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0 0 18px; font-size: 11px; }
+.fc-fit-gaps-lbl  { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--bs-secondary-color); }
+.fc-fit-gap       { background: rgba(128,128,128,.08); border: 1px solid var(--bs-border-color); border-radius: 4px; padding: 2px 8px; }
+.fc-fit-gap-lvl   { color: var(--bs-secondary-color); font-size: 10px; }
+.fc-fit-gap-count { color: #e05252; font-weight: 700; }
+.fc-fit-warn      { margin: 8px 0 0 18px; color: #e05252; font-size: 12px; font-weight: 600; }
+.fc-fit-empty     { padding: 12px 16px; font-size: 12px; color: var(--bs-secondary-color); }
+.fc-fit-hidden    { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--bs-border-color); font-size: 12px; color: var(--bs-secondary-color); }
+.fc-fit-hidden form { display: flex; align-items: center; gap: 6px; margin: 0; }
+.fc-fit-hidden-note { font-size: 11px; opacity: .8; }
+.badge-active   { background: rgba(76,175,107,.12);  color: #4caf6b;  border: none; }
+.badge-info     { background: rgba(77,157,224,.12);  color: #4d9de0;  border: none; }
+
+/* ── Skill grid ── */
+.skill-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 14px;
+}
+
+.sg-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sg-name {
+  font-size: 11px;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--bs-secondary-color);
+}
+.sg-name.met   { color: var(--bs-secondary-color); }
+.sg-name.close { color: #c8a84b; }
+.sg-name.unmet { color: #e05252; }
+
+/* ── Hull legend images ── */
+.hull-legend-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.hull-legend-owned {
+  filter: drop-shadow(0 0 5px rgba(46,204,113,.55));
+}
+.hull-legend-missing {
+  filter: grayscale(100%) brightness(0.45);
+  opacity: 0.7;
+}
+
+/* ── Hull ownership: fit panel header portrait ── */
+.fp-ship-img.hull-not-owned {
+  filter: grayscale(100%) brightness(0.45);
+  opacity: 0.7;
+}
+.fp-ship-img.hull-owned {
+  filter: drop-shadow(0 0 6px rgba(46,204,113,.65));
+}
+
+/* ── Tag sub-category section header (Fleet Command, Fleet Setup, Manage) ── */
+.fh-tag-section-hdr {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--bs-secondary-color);
+  margin: 20px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--bs-border-color);
+}
+.fh-tag-section-hdr:first-child { margin-top: 0; }
+
+.fh-tag-filter-btn.active {
+  background: var(--bs-primary);
+  color: #fff;
+  border-color: var(--bs-primary);
+}
+
+/* ── Collapse arrow ── */
+.doctrine-arrow {
+  font-size: 10px;
+  color: var(--bs-secondary-color);
+  flex-shrink: 0;
+  line-height: 1;
+  transition: transform .15s ease;
+  display: inline-block;
+}
+.doctrine-arrow.open { transform: rotate(90deg); }
+
+/* ── Tier section in fit detail ── */
+.tier-section {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--bs-border-color);
+}
+.tier-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.tier-section-hdr {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--bs-border-color);
+}
+.tier-section-name { font-size: 12px; font-weight: 700; }
+.tier-section-desc {
+  font-size: 11px;
+  color: var(--bs-secondary-color);
+  margin-left: auto;
+}
+.warn-banner {
+  font-size: 11px;
+  font-weight: 600;
+  color: #e05252;
+  background: rgba(224,82,82,.08);
+  border: 1px solid rgba(224,82,82,.2);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+}
+
+/* ── Manage table ── */
+.manage-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  table-layout: fixed;
+}
+.manage-table col.col-ship    { width: 40%; }
+.manage-table col.col-role    { width: 18%; }
+.manage-table col.col-tiers   { width: 14%; }
+.manage-table col.col-actions { width: 28%; }
+.manage-table th {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--bs-secondary-color);
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--bs-border-color);
+  background: rgba(128,128,128,.05);
+}
+.manage-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--bs-border-color);
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.manage-table tr:last-child td { border-bottom: none; }
+.manage-table tr:hover td { background: rgba(128,128,128,.04); }
+.manage-table td.cell-ship > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.badge-role {
+  background: rgba(128,128,128,.15);
+  color: var(--bs-body-color);
+  border: 1px solid rgba(128,128,128,.3);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+.badge-squad {
+  background: rgba(77,157,224,.1);
+  color: #4d9de0;
+  border: 1px solid rgba(77,157,224,.2);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+/* ── Progress bar (readiness) ── */
+.prog-bar {
+  height: 6px;
+  background: rgba(128,128,128,.15);
+  border-radius: 3px;
+  overflow: hidden;
+  display: flex;
+  margin-top: 8px;
+}
+.prog-seg { height: 100%; }
+
+/* ── Readiness stat grid ── */
+.readiness-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  text-align: center;
+  gap: 8px;
+}
+.readiness-stat-num {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.readiness-stat-lbl {
+  font-size: 11px;
+  color: var(--bs-secondary-color);
+  margin-top: 2px;
+}
+
+/* ── Fit panel (offcanvas) ── */
+.fleet-fit-panel {
+  width: 580px !important;
+  display: flex;
+  flex-direction: column;
+  padding: 0 !important;
+}
+.fp-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--bs-border-color);
+  flex-shrink: 0;
+}
+.fp-ship-img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  opacity: .9;
+  flex-shrink: 0;
+}
+.fp-ship-info { flex: 1; min-width: 0; }
+.fp-ship-name { font-size: 16px; font-weight: 700; }
+.fp-ship-sub  { font-size: 12px; color: var(--bs-secondary-color); margin-top: 2px; }
+.fp-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--bs-secondary-color);
+  cursor: pointer;
+  padding: 0;
+  margin-left: auto;
+}
+.fp-close:hover { color: var(--bs-body-color); }
+
+.fp-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--bs-border-color);
+  flex-shrink: 0;
+  padding: 0 20px;
+}
+.fp-tab {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 9px 0;
+  margin-right: 18px;
+  color: var(--bs-secondary-color);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color .1s;
+  user-select: none;
+}
+.fp-tab:hover { color: var(--bs-body-color); }
+.fp-tab.active { color: #4d9de0; border-bottom-color: #4d9de0; }
+
+.fp-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+.fp-footer {
+  flex-shrink: 0;
+  padding: 10px 20px;
+  border-top: 1px solid var(--bs-border-color);
+  background: var(--bs-body-bg);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.fp-stat { display: flex; flex-direction: column; gap: 2px; }
+.fp-stat-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--bs-secondary-color);
+}
+.fp-stat-val { font-size: 13px; font-weight: 600; }
+.fp-stat-sep {
+  width: 1px;
+  height: 28px;
+  background: var(--bs-border-color);
+  flex-shrink: 0;
+}
+/* ── "Viewing as" character switcher (AA top bar, right side) ── */
+.fh-char-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.fh-char-switcher-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: inherit;
+  opacity: .85;
+  white-space: nowrap;
+  margin: 0;
+}
+.fh-nav-switcher { display: flex; align-items: center; padding: 4px 8px; }
+.fh-char-switcher-select {
+  font-size: 13px;
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  color: var(--bs-body-color);
+  border-radius: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.fp-char-select {
+  font-size: 12px;
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  color: var(--bs-body-color);
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+/* Summary bar */
+.fp-summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--bs-border-color);
+}
+.fp-summary-text { font-size: 12px; }
+
+.fp-tier-section {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--bs-border-color);
+}
+.fp-tier-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.fp-tier-hdr {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--bs-border-color);
+}
+.fp-tier-name { font-size: 12px; font-weight: 700; }
+.fp-tier-desc { font-size: 11px; color: var(--bs-secondary-color); margin-left: auto; }
+.fp-export-btn {
+  font-size: 11px;
+  color: var(--bs-secondary-color);
+  text-decoration: none;
+  border: 1px solid var(--bs-border-color);
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.fp-export-btn:hover { color: var(--bs-body-color); background: rgba(128,128,128,.08); }
+
+.fp-eft {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--bs-secondary-color);
+  white-space: pre-wrap;
+  line-height: 1.6;
+  background: rgba(0,0,0,.12);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 4px;
+  padding: 12px;
+}
+.fp-empty {
+  padding: 40px 0;
+  text-align: center;
+  color: var(--bs-secondary-color);
+  font-size: 13px;
+}
+.fp-notes {
+  font-size: 12px;
+  color: var(--bs-secondary-color);
+  background: rgba(128,128,128,.08);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+}
+
+/* Offcanvas overlay backdrop */
+.fleet-panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  z-index: 1040;
+  display: none;
+}
+.fleet-panel-overlay.open { display: block; }
+
+/* The panel itself */
+.fleet-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 580px;
+  background: var(--bs-card-bg, var(--bs-body-bg));
+  border-left: 1px solid var(--bs-border-color);
+  z-index: 1045;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform .25s ease;
+}
+.fleet-panel.open { transform: translateX(0); }
+
+/* ── Form controls — force full box border so Materia's underline style doesn't hide inputs ── */
+.fleet-form .form-control,
+.fleet-form .form-select,
+.fleet-form select,
+.fleet-form textarea {
+  border: 1px solid var(--bs-border-color) !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  font-size: 13px;
+  padding: 6px 10px !important;
+  background-color: var(--bs-body-bg) !important;
+  color: var(--bs-body-color) !important;
+}
+.fleet-form .form-control:required,
+.fleet-form .form-control:required:invalid {
+  box-shadow: none !important;
+  border-color: var(--bs-border-color) !important;
+}
+.fleet-form .form-control:focus,
+.fleet-form .form-select:focus,
+.fleet-form textarea:focus {
+  border-color: #4d9de0 !important;
+  box-shadow: 0 0 0 2px rgba(77,157,224,.15) !important;
+}
+.fleet-form .form-control-sm,
+.fleet-form textarea.form-control-sm { font-size: 12px; padding: 4px 8px !important; }
+
+/* ── MOTD editor toolbar ── */
+.motd-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: 6px 8px;
+  background: #2a2d32;
+  border: 1px solid #444;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+}
+.motd-tb-btn {
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+  color: #e2e8f0;
+  border-radius: 3px;
+  padding: 3px 7px;
+  font-size: 11px;
+  cursor: pointer;
+  vertical-align: middle;
+  box-sizing: border-box;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+}
+.motd-tb-btn:hover { background: rgba(255,255,255,.2); }
+.motd-toolbar select.motd-tb-btn {
+  padding: 0 2px;
+  height: auto;
+  min-height: 0;
+  font-size: 11px;
+  line-height: normal;
+  background: #2a2d32;
+  color: #e2e8f0;
+  border-color: rgba(255,255,255,.2);
+  appearance: auto;
+  -webkit-appearance: auto;
+  transform: scale(0.92);
+  transform-origin: left center;
+}
+.motd-toolbar select.motd-tb-btn option {
+  background: #1a1d21;
+  color: #e2e8f0;
+}
+.motd-tb-color {
+  width: 22px;
+  height: 24px;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 3px;
+  padding: 1px;
+  cursor: pointer;
+  background: none;
+  vertical-align: middle;
+  box-sizing: border-box;
+}
+.motd-tb-sep {
+  width: 1px;
+  height: 18px;
+  background: rgba(255,255,255,.2);
+  margin: 0 2px;
+}
+.motd-preview {
+  background: #000;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 4px;
+  padding: 10px 12px;
+  min-height: 200px;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-y: auto;
+}
+/* EVE's default MOTD text is #bfffffff: white at 75%. A link inside a
+   coloured <font> takes that colour (set inline by the preview). The game
+   shows links without an underline. */
+.motd-preview-content { color: rgba(255, 255, 255, 0.75); font-family: 'Segoe UI', sans-serif; }
+.motd-preview-content a { color: #6868e1; text-decoration: none; }
+
+/* ── Form styling (matching mockup) ── */
+.fh-form-group { margin-bottom: 14px; }
+.fh-form-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--bs-body-color);
+  display: block;
+  margin-bottom: 5px;
+}
+.fh-form-label .hint {
+  font-weight: 400;
+  color: var(--bs-secondary-color);
+  opacity: .7;
+}
+.fh-form-hint {
+  font-size: 11px;
+  color: var(--bs-secondary-color);
+  display: block;
+  margin-top: 4px;
+}
+.card-header-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ── Skill/ship autocomplete ── */
+.skill-search-wrap { position: relative; }
+.skill-dropdown {
+  display: none;
+  position: absolute;
+  left: 0; right: 0;
+  top: calc(100% + 3px);
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 6px;
+  z-index: 1050;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+}
+.skill-dropdown.open { display: block; }
+.skill-drop-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  border-bottom: 1px solid var(--bs-border-color);
+  transition: background .08s;
+}
+.skill-drop-item:last-child { border-bottom: none; }
+.skill-drop-item:hover { background: rgba(128,128,128,.08); }
+.skill-drop-name { color: var(--bs-body-color); font-weight: 500; }
+.skill-drop-group { color: var(--bs-secondary-color); font-size: 11px; }
+.skill-drop-empty { padding: 10px 12px; font-size: 12px; color: var(--bs-secondary-color); }
+
+/* ── Skill tags ── */
+.skill-tags-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 28px;
+  margin-top: 6px;
+}
+.skill-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: color-mix(in srgb, var(--bs-body-bg, #fff), #000 8%);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 4px;
+  padding: 3px 8px 3px 10px;
+  font-size: 12px;
+}
+.skill-tag-name { color: var(--bs-body-color); flex: 1; }
+.skill-tag-level {
+  border: 1px solid var(--bs-border-color);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.skill-tag-remove {
+  color: var(--bs-secondary-color);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  background: none;
+  border: none;
+  padding: 0;
+}
+.skill-tag-remove:hover { color: #e05252; }
+
+/* ── Tier builder ── */
+.tier-builder {
+  background: color-mix(in srgb, var(--bs-body-bg, #fff), #000 6%);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+.tier-builder-hdr {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+/* ── EFT block ── */
+.eft-block {
+  font-size: 0.8rem;
+  background: var(--bs-secondary-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 4px;
+  padding: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--bs-body-color);
+}
+
+/* ── PI Plans ── */
+.pi-plans-section { margin-bottom: 16px; }
+.pi-plans-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--bs-secondary-color); margin-bottom: 4px;
+}
+.pi-plans-hint { font-size: 11px; color: var(--bs-secondary-color); margin-bottom: 10px; line-height: 1.5; }
+.pi-plan-name-label { font-size: 12px; font-weight: 600; color: var(--bs-body-color); margin-bottom: 6px; }
+.pi-plan-desc { font-size: 11.5px; color: var(--bs-secondary-color); margin-bottom: 10px; line-height: 1.5; }
+
+.pi-planet-row {
+  background: transparent;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 6px;
+  padding: 11px 14px;
+  margin-bottom: 8px;
+}
+.pi-planet-row-inner { display: flex; align-items: flex-start; gap: 10px; }
+
+/* Planet type colors — left border on the row */
+.pi-planet-plasma.pi-planet-row   { border-left: 4px solid #e05252 !important; }
+.pi-planet-lava.pi-planet-row     { border-left: 4px solid #e67e22 !important; }
+.pi-planet-barren.pi-planet-row   { border-left: 4px solid #c8a84b !important; }
+.pi-planet-temperate.pi-planet-row{ border-left: 4px solid #4caf6b !important; }
+.pi-planet-oceanic.pi-planet-row  { border-left: 4px solid #4d9de0 !important; }
+.pi-planet-gas.pi-planet-row      { border-left: 4px solid #9b59b6 !important; }
+.pi-planet-ice.pi-planet-row      { border-left: 4px solid #7ecfdf !important; }
+.pi-planet-storm.pi-planet-row    { border-left: 4px solid #8395a7 !important; }
+
+.pi-planet-type-badge {
+  font-size: 10px; font-weight: 700; padding: 1px 7px;
+  border-radius: 999px; white-space: nowrap;
+}
+.pi-planet-plasma .pi-planet-type-badge    { background: rgba(224,82,82,.2);   color: #e05252; border: 1px solid rgba(224,82,82,.4); }
+.pi-planet-lava .pi-planet-type-badge      { background: rgba(230,126,34,.2);  color: #e67e22; border: 1px solid rgba(230,126,34,.4); }
+.pi-planet-barren .pi-planet-type-badge    { background: rgba(200,168,75,.2);  color: #c8a84b; border: 1px solid rgba(200,168,75,.4); }
+.pi-planet-temperate .pi-planet-type-badge { background: rgba(76,175,107,.2);  color: #4caf6b; border: 1px solid rgba(76,175,107,.4); }
+.pi-planet-oceanic .pi-planet-type-badge   { background: rgba(77,157,224,.2);  color: #4d9de0; border: 1px solid rgba(77,157,224,.4); }
+.pi-planet-gas .pi-planet-type-badge       { background: rgba(155,89,182,.2);  color: #9b59b6; border: 1px solid rgba(155,89,182,.4); }
+.pi-planet-ice .pi-planet-type-badge       { background: rgba(126,207,223,.2); color: #7ecfdf; border: 1px solid rgba(126,207,223,.4); }
+.pi-planet-storm .pi-planet-type-badge     { background: rgba(131,149,167,.2); color: #8395a7; border: 1px solid rgba(131,149,167,.4); }
+
+.pi-template-preview {
+  font-size: 11px; color: var(--bs-secondary-color);
+  background: rgba(0,0,0,.15); border: 1px solid var(--bs-border-color);
+  border-radius: 4px; padding: 4px 8px; margin-top: 5px;
+}
+.pi-copy-btn { flex-shrink: 0; }
+
+.pi-plan-collapse-hdr {
+  display: flex; align-items: center;
+  font-size: 12px; font-weight: 600; color: var(--bs-body-color);
+  cursor: pointer; user-select: none; margin-bottom: 6px;
+}
+.pi-plan-body { margin-bottom: 4px; }
+
+/* ── Skill plan badge ── */
+.skill-plan-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: #4d9de0;
+  background: rgba(77,157,224,.12);
+  border: 1px solid rgba(77,157,224,.25);
+  padding: 1px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* ── Group picker ── */
+.fh-gp-wrap { position: relative; }
+.fh-gp-box {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 5px;
+  min-height: 34px; padding: 4px 8px;
+  background: var(--bs-body-bg); border: 1px solid var(--bs-border-color);
+  border-radius: 4px; cursor: text;
+}
+.fh-gp-box:focus-within { border-color: #4d9de0; }
+.fh-gp-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600;
+  background: rgba(77,157,224,.15); color: #4d9de0;
+  border: 1px solid rgba(77,157,224,.3);
+  border-radius: 999px; padding: 2px 8px;
+}
+.fh-gp-tag-remove {
+  cursor: pointer; font-size: 13px; line-height: 1;
+  color: #4d9de0; opacity: .7;
+}
+.fh-gp-tag-remove:hover { opacity: 1; }
+.fh-gp-search {
+  flex: 1; min-width: 120px; border: none; outline: none;
+  background: transparent; color: var(--bs-body-color); font-size: 12px;
+  padding: 2px 0;
+}
+.fh-gp-dropdown {
+  display: none; position: absolute; left: 0; right: 0; top: 100%;
+  margin-top: 2px; z-index: 200;
+  background: var(--bs-body-bg); border: 1px solid var(--bs-border-color);
+  border-radius: 4px; max-height: 200px; overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,.2);
+}
+.fh-gp-option {
+  padding: 6px 12px; font-size: 12px; cursor: pointer;
+  color: var(--bs-body-color);
+}
+.fh-gp-option:hover { background: rgba(77,157,224,.12); color: #4d9de0; }
+.fh-gp-empty { padding: 6px 12px; font-size: 12px; color: var(--bs-secondary-color); }
+
+/* -----------------------------------------------------------------------
+   Doctrines and My Skills layout (#8)
+----------------------------------------------------------------------- */
+
+/* Section links start over the page content: the first link's text lines up
+   with the page heading (AA sidebar 325px + content padding). Below lg AA
+   folds the links behind its own navbar toggler, so this only applies at lg+. */
+@media (min-width: 992px) {
+  .navbar div.navbar-brand { min-width: 247px; }
+}
+
+/* ── Page heading ── */
+.fh-page-hdr { margin-bottom: 18px; }
+.fh-page-hdr h1 { font-size: 26px; font-weight: 700; margin: 0 0 4px; line-height: 1.2; }
+.fh-page-hdr p { margin: 0; font-size: 14px; color: var(--bs-secondary-color); max-width: 760px; }
+
+/* ── "How to read this page" key ── */
+.fh-key { border: 1px solid var(--bs-border-color); border-radius: 8px; margin-bottom: 18px; background: var(--bs-tertiary-bg); }
+.fh-key summary { cursor: pointer; padding: 10px 14px; font-weight: 600; font-size: 13px; list-style: none; display: flex; align-items: center; gap: 8px; border-radius: 8px; }
+.fh-key summary::-webkit-details-marker { display: none; }
+.fh-key[open] summary .doctrine-arrow { transform: rotate(90deg); }
+.fh-key-groups { display: flex; flex-wrap: wrap; gap: 12px; padding: 0 14px 14px; }
+.fh-key-group { background: var(--bs-body-bg); border: 1px solid var(--bs-border-color); border-radius: 6px; padding: 10px 12px; flex: 1 1 240px; }
+.fh-key-group h2 { font-size: 12px; font-weight: 700; margin: 0 0 8px; }
+.fh-key-item { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 6px; }
+.fh-key-item:last-child { margin-bottom: 0; }
+
+/* ── Toolbar: tag filters, then Only missing / Expand all on the right ── */
+.fh-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 16px; }
+.fh-toolbar .fh-btn { font-size: 12px; padding: 5px 11px; }
+.fh-toolbar .spacer { flex: 1; }
+.fh-only-missing { display: flex; align-items: center; gap: 6px; font-size: 12px; margin: 0 8px 0 0; cursor: pointer; }
+
+/* ── Doctrine search (#4): ship search, Tag / Ship class facets, chips ── */
+/* Only what the filter hides; themes give some of these a display value. */
+.fh-root .fh-tag-group[hidden], .fh-root .fh-doc[hidden], .fh-root .fh-filter [hidden], .fh-root .fh-filter-empty[hidden] { display: none !important; }
+.fh-filter { margin-bottom: 16px; }
+.fh-filter .fh-toolbar { margin-bottom: 10px; }
+/* Search box matches the toolbar buttons beside it (themes otherwise draw it white, or underline-only in Materia). */
+.fh-root .fh-ship-search {
+  flex: 0 1 320px; min-width: 200px; font-size: 12px; padding: 5px 10px !important;
+  background-color: rgba(128,128,128,.12) !important; color: var(--bs-body-color) !important;
+  border: 1px solid rgba(128,128,128,.35) !important; border-radius: 4px !important; box-shadow: none !important;
+}
+.fh-root .fh-ship-search::placeholder { color: var(--bs-secondary-color); opacity: 1; }
+[data-theme="materia"] .fh-root .fh-ship-search::placeholder { color: #5c5c5c; }
+.fh-root .fh-ship-search:focus { border-color: #4d9de0 !important; box-shadow: 0 0 0 2px rgba(77,157,224,.15) !important; }
+.fh-facet { position: relative; }
+.fh-facet > summary { list-style: none; cursor: pointer; user-select: none; }
+.fh-facet > summary::-webkit-details-marker { display: none; }
+.fh-facet > summary::after { content: "\25BE"; font-size: 10px; opacity: .7; }
+.fh-facet-count { font-weight: 700; }
+.fh-facet-menu {
+  position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; min-width: 180px; max-height: 320px; overflow-y: auto;
+  margin: 0; padding: 6px; border: 1px solid var(--bs-border-color); border-radius: 6px;
+  background: var(--bs-body-bg); box-shadow: 0 6px 18px rgba(0,0,0,.18);
+}
+.fh-facet-menu label { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 4px; font-size: 13px; white-space: nowrap; cursor: pointer; }
+.fh-facet-menu label:hover { background: rgba(128,128,128,.15); }
+/* Phones: long labels wrap instead of widening the menu past the screen (fleet.js slides it left to fit). */
+@media (max-width: 575.98px) {
+  .fh-facet-menu { max-width: calc(100vw - 32px); }
+  .fh-facet-menu label { white-space: normal; }
+}
+.fh-facet-lbl { font-size: 12px; font-weight: 700; color: var(--bs-secondary-color); }
+.fh-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+#fh-filter-chip-list { display: contents; }
+.fh-chip {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 3px 10px; border-radius: 999px;
+  border: 1px solid rgba(77,157,224,.45); background: rgba(77,157,224,.15); color: var(--bs-body-color); cursor: pointer;
+}
+.fh-chip span { font-weight: 700; }
+.fh-chips-clear { background: none; border: 0; padding: 0 4px; font-size: 12px; color: #1f66a3; text-decoration: underline; cursor: pointer; }
+.fh-filter-empty { border: 1px dashed var(--bs-border-color); border-radius: 8px; padding: 18px; text-align: center; margin-bottom: 16px; }
+.fh-filter-empty p { font-size: 14px; margin: 0 0 10px; }
+.fh-single-bar { margin-bottom: 16px; }
+.fh-match-badge {
+  display: none; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+  border: 1px solid rgba(77,157,224,.45); background: rgba(77,157,224,.15); color: #1f66a3;
+}
+.fh-fit.fh-match { box-shadow: 0 0 0 2px #2b7bc0; }
+.fh-fit.fh-match .fh-match-badge { display: inline-block; }
+
+/* ── Tag sections ── */
+.fh-section { margin-bottom: 26px; }
+.fh-section > h2 {
+  display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; margin: 0 0 10px;
+  padding-bottom: 6px; border-bottom: 2px solid var(--bs-border-color);
+}
+.fh-section > h2 .count { font-size: 12px; font-weight: 400; color: var(--bs-secondary-color); }
+
+/* ── Doctrine cards ── */
+.fh-doc { position: relative; border: 1px solid var(--bs-border-color); border-radius: 8px; margin-bottom: 10px; background: var(--bs-body-bg); overflow: hidden; }
+.fh-doc-hdr { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; }
+.fh-doc-hdr:hover { background: rgba(128,128,128,.05); }
+.fh-doc.open > .fh-doc-hdr { border-bottom: 1px solid var(--bs-border-color); background: var(--bs-tertiary-bg); }
+.fh-doc-hdr .doctrine-arrow { font-size: 11px; }
+.fh-doc.open > .fh-doc-hdr .doctrine-arrow { transform: rotate(90deg); }
+.fh-doc-title { flex: 1; min-width: 0; }
+.fh-doc-title h3 { font-size: 16px; font-weight: 700; margin: 0; }
+.fh-doc-title p { font-size: 12px; margin: 2px 0 0; color: var(--bs-secondary-color); }
+.fh-doc-toggle { background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+/* Tag badge: background and text colour are set inline per doctrine (#5). */
+.fh-doc-tag { font-size: 11px; font-weight: 600; padding: 3px 8px; margin-left: 6px; vertical-align: 2px; border: none; }
+.fh-tag-color { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.fh-tag-swatches { display: inline-flex; gap: 6px; }
+.fh-tag-swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--bs-border-color); padding: 0; cursor: pointer; }
+.fh-tag-swatch[aria-pressed="true"] { outline: 2px solid var(--bs-body-color); outline-offset: 2px; }
+#fh-tag-color-box { width: 36px; height: 30px; padding: 2px; border: 1px solid var(--bs-border-color); border-radius: 4px; background: var(--bs-body-bg); cursor: pointer; }
+.fh-tag-hex { width: 100px; font-family: var(--bs-font-monospace); }
+.fh-tag-preview-label { font-size: 12px; color: var(--bs-secondary-color); margin-left: 4px; }
+.fh-tag-color-error { font-size: 12px; color: var(--bs-form-invalid-color, #dc3545); margin-top: 4px; }
+/* Same as the #4 search: themes can give these a display value. */
+.fh-root #fh-tag-preview[hidden], .fh-root .fh-tag-preview-label[hidden], .fh-root .fh-tag-color-error[hidden] { display: none !important; }
+.fh-doc-meta { font-size: 12px; color: var(--bs-secondary-color); white-space: nowrap; }
+.fh-doc-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.fh-doc-body { display: none; padding: 14px 16px 16px; }
+.fh-doc.open > .fh-doc-body { display: block; }
+.fh-callout { border-left: 3px solid #c8a84b; background: rgba(200,168,75,.10); padding: 8px 12px; border-radius: 0 6px 6px 0; margin-bottom: 14px; font-size: 12px; white-space: pre-line; }
+.fh-callout b { display: block; font-size: 11px; margin-bottom: 2px; white-space: normal; }
+.fh-sublabel { font-size: 12px; font-weight: 700; margin: 0 0 8px; }
+.fh-sublabel-note { font-weight: 400; color: var(--bs-secondary-color); margin-left: 6px; }
+.fh-shared-grid { margin-bottom: 16px; }
+.fh-structures { border-top: 1px solid var(--bs-border-color); margin-top: 14px; padding-top: 12px; }
+
+/* ── MOTDs (#3): Doctrines page list and the Fleet Setup section ── */
+.fh-motds { border-top: 1px solid var(--bs-border-color); margin-top: 14px; padding-top: 12px; }
+.fh-motd-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 0; }
+.fh-motd-name { font-size: 12px; font-weight: 600; }
+.fh-motd-where { font-size: 11px; color: var(--bs-secondary-color); }
+.fh-motd-badge { font-size: 10px; font-weight: 600; background: rgba(77,157,224,.18); color: var(--bs-body-color); }
+.fh-motd-badge-own { background: rgba(76,175,107,.20); }
+.fh-motd-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.fh-motd-link { font-size: 11px; }
+.fh-motd-list .fh-motd-row { padding: 6px 16px; border-bottom: 1px solid var(--bs-border-color); }
+.fh-motd-list .fh-motd-row:last-of-type { border-bottom: 0; }
+.fh-motd-row:target { background: rgba(77,157,224,.10); box-shadow: inset 3px 0 0 #4d9de0; }
+.fh-motd-text summary { font-size: 11px; color: var(--bs-secondary-color); cursor: pointer; width: fit-content; }
+.fh-motd-text pre { font-size: 11px; white-space: pre-wrap; word-break: break-word; margin: 6px 0 4px; padding: 8px; border-radius: 4px; background: rgba(128,128,128,.08); max-height: 260px; overflow: auto; }
+.fh-motd-empty { padding: 14px 16px; font-size: 12px; color: var(--bs-secondary-color); }
+.fh-motd-pick { width: auto; max-width: 220px; font-size: 11px; }
+/* Same as the #4 search: themes can give these a display value. */
+.fh-root .fh-motd-row[hidden], .fh-root #fh-motd-none[hidden] { display: none !important; }
+
+/* ── Fit cards (Doctrines) ── */
+.fh-fits { display: grid; gap: 8px; }
+.fh-fit { display: flex; border: 1px solid var(--bs-border-color); border-left-width: 4px; border-radius: 6px; background: var(--bs-body-bg); cursor: pointer; }
+.fh-fit:hover { background: rgba(128,128,128,.05); }
+.fh-fit.highlight-none { border-left-color: #dc3545; }
+.fh-fit.highlight-min  { border-left-color: #e67e22; }
+.fh-fit.highlight-recommended { border-left-color: #8bc34a; }
+.fh-fit.highlight-all  { border-left-color: #4caf6b; }
+.fh-fit.skill-plan-row { border-left-color: #4d9de0; }
+.fh-fit-img { width: 76px; display: flex; align-items: center; justify-content: center; padding: 10px; flex-shrink: 0; }
+.fh-fit-img img { width: 56px; height: 56px; border-radius: 4px; object-fit: contain; }
+.fh-fit-img.hull-not-owned img { filter: grayscale(100%) brightness(0.45); opacity: 0.7; }
+.fh-fit-img.hull-owned img { filter: drop-shadow(0 0 5px rgba(46,204,113,.55)); }
+.fh-fit-main { flex: 1; min-width: 0; padding: 10px 12px 10px 0; }
+.fh-fit-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fh-fit-name h5 { font-size: 14px; font-weight: 700; margin: 0; }
+.fh-fit-desc { font-size: 12px; color: var(--bs-secondary-color); margin: 2px 0 0; }
+.fh-fit-flag { font-size: 12px; color: #8a6d1a; margin: 2px 0 0; }
+.fh-ready { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 8px; font-size: 12px; }
+.fh-ready > span:first-child { font-weight: 600; }
+.fh-ready .tier, .fh-skillfit-hdr .tier { display: inline-flex; align-items: center; gap: 6px; }
+.fh-ready .badge, .fh-skillfit-hdr .badge, .fh-tier-hdr .badge { font-size: 11px; }
+.fh-fit-cta { display: flex; align-items: center; padding: 0 14px; flex-shrink: 0; }
+.fh-fit-cta .fh-btn { font-size: 12px; padding: 5px 11px; }
+
+/* ── My Skills ── */
+.fh-closest { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border: 1px solid rgba(77,157,224,.45); background: rgba(77,157,224,.08); border-radius: 8px; padding: 12px 16px; margin-bottom: 18px; }
+.fh-closest-text { flex: 1; min-width: 220px; font-size: 13px; }
+.fh-closest-text b { display: block; color: #1f5f99; }
+.fh-closest .fh-btn { font-size: 12px; padding: 5px 11px; }
+.fh-skillfit { border: 1px solid var(--bs-border-color); border-radius: 6px; margin-bottom: 12px; overflow: hidden; scroll-margin-top: 90px; }
+.fh-skillfit:last-child { margin-bottom: 0; }
+.fh-skillfit-hdr { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; background: var(--bs-tertiary-bg); border-bottom: 1px solid var(--bs-border-color); }
+.fh-skillfit-hdr img { width: 32px; height: 32px; border-radius: 4px; }
+.fh-skillfit-hdr h4 { font-size: 14px; font-weight: 700; margin: 0; }
+.fh-skillfit-hdr .summary { margin-left: auto; display: flex; gap: 6px 14px; flex-wrap: wrap; font-size: 12px; align-items: center; }
+.fh-tier { padding: 10px 12px 12px; }
+.fh-tier + .fh-tier { border-top: 1px dashed var(--bs-border-color); }
+.fh-tier-title { margin: 0 0 8px; font-size: 13px; font-weight: 700; }
+.fh-tier-hdr { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; background: none; border: 0; padding: 0; font: inherit; color: inherit; }
+.fh-tier-hdr .doctrine-arrow { transform: rotate(90deg); }
+.fh-tier.closed .fh-tier-hdr .doctrine-arrow { transform: none; }
+.fh-tier.closed .fh-tier-title { margin-bottom: 0; }
+.fh-tier.closed .fh-tier-body { display: none; }
+.fh-tier-note { font-size: 12px; color: var(--bs-secondary-color); margin: 0; }
+.fh-tier-done { display: none; }
+.only-missing .fh-tier-done { display: block; }
+.only-missing .fh-grid .sg-row.met-row { display: none; }
+
+/* Skill names sit next to their pips instead of across the card */
+.fh-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px 28px; }
+.fh-grid .sg-row { justify-content: space-between; max-width: 300px; }
+.fh-grid .sg-name { font-size: 12px; flex: 0 1 auto; }
+.fh-grid .sg-name.met { color: var(--bs-body-color); }
+/* Darker gold and red so 12px text passes WCAG AA on light themes */
+.fh-grid .sg-name.close { color: #8a6d1a; font-weight: 600; }
+.fh-grid .sg-name.unmet { color: #c0392b; font-weight: 600; }
+/* Darkly paints a dark body but keeps Bootstrap's light-mode surface and border
+   variables (it never sets data-bs-theme), so panels using them render white.
+   Remap them to Darkly's own dark-mode values inside Fleet Hub, including the
+   dashboard widget and the navbar character switcher that live outside .fh-root. */
+[data-theme="darkly"] .fh-root,
+[data-theme="darkly"] #fleet-readiness-widget,
+[data-theme="darkly"] .fh-nav-switcher {
+  --bs-secondary-bg: #303030;
+  --bs-secondary-bg-rgb: 48, 48, 48;
+  --bs-tertiary-bg: #292929;
+  --bs-tertiary-bg-rgb: 41, 41, 41;
+  --bs-border-color: #444;
+}
+/* Darkly inputs stay white with dark text; keep their disabled fill light too */
+[data-theme="darkly"] .fh-root .form-control:disabled,
+[data-theme="darkly"] .fh-root .form-select:disabled,
+[data-theme="darkly"] .fh-root .form-floating > :disabled ~ label::after { background-color: #ebebeb; }
+/* Bootstrap Dark sets data-bs-theme; AA's Darkly only sets data-theme */
+[data-bs-theme="dark"] .fh-grid .sg-name.close,
+[data-theme="darkly"] .fh-grid .sg-name.close,
+[data-bs-theme="dark"] .fh-fit-flag,
+[data-theme="darkly"] .fh-fit-flag { color: #d9b85c; }
+[data-bs-theme="dark"] .fh-grid .sg-name.unmet,
+[data-theme="darkly"] .fh-grid .sg-name.unmet { color: #ff7b72; }
+[data-bs-theme="dark"] .fh-closest-text b,
+[data-theme="darkly"] .fh-closest-text b,
+[data-bs-theme="dark"] .fh-match-badge,
+[data-theme="darkly"] .fh-match-badge,
+[data-bs-theme="dark"] .fh-chips-clear,
+[data-theme="darkly"] .fh-chips-clear { color: #6cb4ee; }
+[data-bs-theme="dark"] .fh-fit.fh-match,
+[data-theme="darkly"] .fh-fit.fh-match { box-shadow: 0 0 0 2px rgba(77,157,224,.7); }
+/* Darkly doesn't set color-scheme, so native checkboxes would draw white on the dark menu. */
+[data-theme="darkly"] .fh-facet-menu { color-scheme: dark; }
+
+/* ── Keyboard focus rings ── */
+.fh-page a:focus-visible, .fh-page button:focus-visible, .fh-page summary:focus-visible,
+.fh-page input:focus-visible, .fh-nav-switcher select:focus-visible {
+  outline: 3px solid #4d9de0; outline-offset: 2px; border-radius: 4px;
+}
+
+/* Narrow content area (tablet: AA's sidebar still takes its width) */
+@media (max-width: 1199.98px) {
+  .fh-doc-hdr { flex-wrap: wrap; }
+  .fh-doc-actions { order: 2; }
+  .fh-doc-meta { order: 3; width: 100%; padding-left: 23px; }
+  .fh-fit { flex-wrap: wrap; }
+  .fh-fit-cta { width: 100%; padding: 0 12px 10px 76px; }
+  .fh-skillfit-hdr .summary { margin-left: 42px; width: 100%; }
+  .fh-grid { grid-template-columns: 1fr; }
+  .fh-grid .sg-row { max-width: none; }
+}

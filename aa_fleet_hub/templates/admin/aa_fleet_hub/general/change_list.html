@@ -1,0 +1,18 @@
+{% extends "admin/change_list.html" %}
+{% block object-tools-items %}
+<li>
+  <form method="post" action="{{ recompute_url }}" style="display:inline">
+    {% csrf_token %}
+    <button type="submit" class="button">Recompute Readiness Now</button>
+  </form>
+</li>
+<li>
+  <form method="post" action="{{ refresh_eve_url }}" style="display:inline">
+    {% csrf_token %}
+    <button type="submit" class="button">Refresh Ship/Skill Catalog</button>
+  </form>
+</li>
+<li>
+  <a href="{{ export_roster_url }}" class="button">Export Member Roster CSV</a>
+</li>
+{% endblock %}

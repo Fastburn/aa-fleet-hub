@@ -1,0 +1,318 @@
+{% extends 'aa_fleet_hub/base.html' %}
+{% load i18n static %}
+
+{% block page_title %}{% if fit %}Edit{% else %}New{% endif %} Fit{% endblock %}
+{% block nav_manage %}active{% endblock %}
+
+{% block fleet_content %}
+<div class="container-fluid">
+  {% with crumb_doctrine=fit.doctrine|default:doctrine %}
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'aa_fleet_hub:manage_index' %}">Manage</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'aa_fleet_hub:manage_index' %}#manage-doc-{{ crumb_doctrine.id }}">{{ crumb_doctrine.name }}</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{% if fit %}Edit Fit: {{ fit.name }}{% else %}New Fit{% endif %}</li>
+    </ol>
+  </nav>
+  {% endwith %}
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-title">{% if fit %}Edit Fit: {{ fit.name }}{% else %}New Fit — {{ doctrine.name }}{% endif %}</div>
+    </div>
+    <div class="card-body">
+      {% if error %}
+        <div class="alert alert-danger mb-3">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" id="fit-form" class="fleet-form" novalidate onsubmit="serializeTiers()">
+        {% csrf_token %}
+        <input type="hidden" name="doctrine_id" value="{{ doctrine.id }}">
+        <input type="hidden" name="ship_type_id" id="ship_type_id" value="{{ form.ship_type_id|default:'' }}">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <!-- Ship search (normal fits) -->
+          <div class="fh-form-group" id="ship-section">
+            <label class="fh-form-label">Ship</label>
+            <div class="skill-search-wrap">
+              <input type="text" id="ship-search" class="form-control"
+                     placeholder="Search ship name…" autocomplete="off"
+                     value="{{ form.ship_name|default:'' }}"
+                     oninput="searchShips(this,'ship-drop',(id,name)=>{ document.getElementById('ship_type_id').value=id; document.getElementById('ship-search').value=name; closeDropdown('ship-drop'); })"
+                     onfocus="searchShips(this,'ship-drop',(id,name)=>{ document.getElementById('ship_type_id').value=id; document.getElementById('ship-search').value=name; closeDropdown('ship-drop'); })"
+                     onblur="setTimeout(()=>closeDropdown('ship-drop'),150)">
+              <div id="ship-drop" class="skill-dropdown"></div>
+            </div>
+          </div>
+
+          <!-- Icon picker (skill plans) — hidden until Skill Plan checked -->
+          <div class="fh-form-group" id="icon-section" style="display:none">
+            <label class="fh-form-label">Plan Icon</label>
+            <select class="form-control" id="plan-icon-select" onchange="setPlanIcon(this.value)">
+              <option value="">— Select icon —</option>
+              <option value="3416">Skill Book</option>
+              <optgroup label="Planets">
+                <option value="2016">Barren Planet</option>
+                <option value="2015">Lava Planet</option>
+                <option value="2014">Oceanic Planet</option>
+                <option value="2017">Ice Planet</option>
+                <option value="2063">Gas Planet</option>
+                <option value="2017">Storm Planet</option>
+                <option value="11">Temperate Planet</option>
+              </optgroup>
+            </select>
+            <!-- Preview -->
+            <div style="margin-top:8px;display:none;align-items:center;gap:10px" id="icon-preview-wrap">
+              <img id="icon-preview-img" src="" width="40" height="40"
+                   style="border-radius:4px;opacity:.9" alt="">
+              <span id="icon-preview-label" style="font-size:12px;color:var(--bs-secondary-color)"></span>
+            </div>
+          </div>
+
+          <div class="fh-form-group">
+            <label class="fh-form-label">Role <span class="hint">(free-form)</span></label>
+            <input type="text" name="role" class="form-control" list="role-suggestions"
+                   value="{{ form.role|default:'' }}" placeholder="e.g. DPS, Logi, Support…">
+            <datalist id="role-suggestions">
+              <option value="DPS"><option value="Logi"><option value="Support">
+              <option value="FC"><option value="Scout">
+            </datalist>
+            <label style="display:flex;align-items:center;gap:7px;margin-top:7px;cursor:pointer;font-size:12px;color:var(--bs-secondary-color)">
+              <input type="checkbox" name="is_skill_plan" id="id_is_skill_plan"
+                     {% if form.is_skill_plan %}checked{% endif %}
+                     onchange="onSkillPlanToggle(this.checked)">
+              Skill Plan <span style="color:var(--bs-secondary-color);opacity:.7">(hides EFT, shows PI template builder)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="fh-form-group">
+          <label class="fh-form-label">Sort Order <span class="hint">(lower = higher priority, 0 = top)</span></label>
+          <input type="number" name="sort_order" class="form-control"
+                 value="{{ form.sort_order|default:0 }}" min="0" style="max-width:120px">
+        </div>
+
+        <div class="fh-form-group">
+          <label class="fh-form-label">Fit Name</label>
+          <input type="text" name="name" class="form-control"
+                 value="{{ form.name|default:'' }}" required placeholder="e.g. Ferox DPS">
+        </div>
+
+        <div class="fh-form-group">
+          <label class="fh-form-label">Description <span class="hint">(optional)</span></label>
+          <input type="text" name="description" class="form-control"
+                 value="{{ form.description|default:'' }}" placeholder="Short description (optional)">
+        </div>
+
+        <div class="fh-form-group">
+          <label class="fh-form-label">Notes <span class="hint">(optional — shown to all who can see this doctrine)</span></label>
+          <input type="text" name="notes" class="form-control"
+                 value="{{ form.notes|default:'' }}" placeholder="e.g. Carry Void charges, use this implant…">
+        </div>
+
+        <!-- EFT section -->
+        <div class="fh-form-group" id="eft-section">
+          <label class="fh-form-label">EFT Fit <span class="hint">(paste from EVE / Pyfa)</span></label>
+          <textarea name="eft" class="form-control font-monospace" rows="8"
+                    placeholder="[Ferox, My Ferox Fit]&#10;Magnetic Field Stabilizer II&#10;…">{{ form.eft|default:'' }}</textarea>
+        </div>
+
+        <input type="hidden" name="pi_plans" id="pi-plans-hidden">
+
+        <!-- PI Plans section (skill plan only) -->
+        <div class="fh-form-group" id="pi-section" style="display:none">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div style="font-size:12px;font-weight:700;color:var(--bs-secondary-color)">PI Plans</div>
+            <button type="button" class="fh-btn fh-btn-secondary" onclick="addPiPlanBlock()">+ Add Plan</button>
+          </div>
+          <div style="background:rgba(77,157,224,.06);border:1px solid rgba(77,157,224,.2);border-radius:6px;padding:9px 12px;margin-bottom:10px;font-size:11.5px;color:var(--bs-secondary-color);line-height:1.5">
+            Each plan is a self-contained PI setup (e.g. "Robotics"). Add one planet entry per planet. Paste the raw JSON from EVE's in-game PI export.
+          </div>
+          <div id="pi-plans-builder"></div>
+        </div>
+
+        <hr>
+
+        <!-- Skill tiers -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <div style="font-size:12px;font-weight:700;color:var(--bs-secondary-color)">Skill Tiers</div>
+          <button type="button" class="fh-btn fh-btn-secondary" onclick="addTierBlock()">+ Add Tier</button>
+        </div>
+        <div id="tiers-builder"></div>
+
+        <hr>
+
+        <!-- Version & Changelog -->
+        <div style="display:grid;grid-template-columns:160px 1fr;gap:14px;align-items:start">
+          <div class="fh-form-group" style="margin-bottom:0">
+            <label class="fh-form-label">Version</label>
+            <input type="text" name="version" class="form-control"
+                   value="{{ form.version|default:'1.0' }}" placeholder="1.0"
+                   style="font-family:monospace">
+          </div>
+          <div class="fh-form-group" style="margin-bottom:0">
+            <label class="fh-form-label">
+              {% if fit %}Change Note <span class="hint">(optional — logged with this version)</span>{% else %}Note <span class="hint">(optional)</span>{% endif %}
+            </label>
+            <input type="text" name="changelog_note" class="form-control"
+                   value="{{ form.changelog_note|default:'' }}"
+                   placeholder="e.g. swapped plates for trimark, updated charges…">
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button type="submit" class="fh-btn fh-btn-primary">
+            {% if fit %}Save Changes{% else %}Create Fit{% endif %}
+          </button>
+          <a href="{% url 'aa_fleet_hub:manage_index' %}" class="fh-btn fh-btn-secondary">Cancel</a>
+        </div>
+      </form>
+
+      {% if fit and changelog %}
+      <hr>
+      <div style="font-size:12px;font-weight:700;color:var(--bs-secondary-color);margin-bottom:8px">Change History</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse">
+        {% for entry in changelog %}
+        <tr style="border-bottom:1px solid rgba(255,255,255,.06)">
+          <td style="padding:5px 8px;font-family:monospace;color:#4d9de0;white-space:nowrap">v{{ entry.version }}</td>
+          <td style="padding:5px 8px;color:var(--bs-secondary-color);white-space:nowrap">{{ entry.changed_by.profile.main_character.character_name|default:entry.changed_by.username }}</td>
+          <td style="padding:5px 8px">{{ entry.note }}</td>
+          <td style="padding:5px 8px;color:var(--bs-secondary-color);white-space:nowrap;text-align:right">{{ entry.created_at|date:"d M Y H:i" }}</td>
+          <td style="padding:5px 8px;text-align:right">
+            {% if can_manage_doctrines %}
+            <form method="post" action="{% url 'aa_fleet_hub:changelog_delete' entry.id %}" style="display:inline"
+                  onsubmit="return confirm('Remove this changelog entry?')">
+              {% csrf_token %}
+              <button type="submit" class="fh-btn fh-btn-danger" style="padding:1px 7px;font-size:11px">×</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block fleet_js %}
+{% if form and form.is_skill_plan and form.pi_plans %}{{ form.pi_plans|json_script:"fit-pi-plans-data" }}{% endif %}
+<script>
+window.FLEET_SKILL_AC_URL    = "{% url 'aa_fleet_hub:autocomplete_skills' %}";
+window.FLEET_SHIP_AC_URL     = "{% url 'aa_fleet_hub:autocomplete_ships' %}";
+window.FLEET_SKILL_EXACT_URL = "{% url 'aa_fleet_hub:autocomplete_skill_exact' %}";
+
+function onSkillPlanToggle(checked) {
+  document.getElementById('eft-section').style.display   = checked ? 'none' : '';
+  document.getElementById('pi-section').style.display    = checked ? '' : 'none';
+  document.getElementById('ship-section').style.display  = checked ? 'none' : '';
+  document.getElementById('icon-section').style.display  = checked ? '' : 'none';
+}
+
+function setPlanIcon(value) {
+  if (!value) return;
+  document.getElementById('ship_type_id').value = value;
+  _showIconPreview(value);
+}
+
+function setPlanIconFromSkill(id, name) {
+  document.getElementById('ship_type_id').value = id;
+  document.getElementById('icon-skill-search').value = name;
+  closeDropdown('icon-skill-drop');
+  _showIconPreview(id, name);
+}
+
+function _showIconPreview(typeId, label) {
+  const img = document.getElementById('icon-preview-img');
+  const lbl = document.getElementById('icon-preview-label');
+  const wrap = document.getElementById('icon-preview-wrap');
+  if (!typeId) { wrap.style.display = 'none'; return; }
+  img.src = `https://images.evetech.net/types/${typeId}/icon?size=64`;
+  lbl.textContent = label || document.getElementById('plan-icon-select')?.selectedOptions[0]?.text || '';
+  wrap.style.display = 'flex';
+}
+onSkillPlanToggle(document.getElementById('id_is_skill_plan').checked);
+
+{% if form and form.is_skill_plan and form.ship_type_id %}
+(function() {
+  const sel = document.getElementById('plan-icon-select');
+  if (sel) sel.value = '{{ form.ship_type_id }}';
+  _showIconPreview('{{ form.ship_type_id }}');
+})();
+{% endif %}
+
+// PI plan builder
+const PI_PLANET_TYPES = ['Barren','Gas','Ice','Lava','Oceanic','Plasma','Storm','Temperate'];
+function addPiPlanBlock() {
+  const list = document.getElementById('pi-plans-builder');
+  const div = document.createElement('div');
+  div.className = 'pi-plan-block';
+  div.style.cssText = 'background:rgba(128,128,128,.06);border:1px solid var(--bs-border-color);border-radius:6px;padding:12px;margin-bottom:10px';
+  div.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <input class="form-control form-control-sm pi-plan-name" type="text" placeholder="Plan name (e.g. Robotics)" style="max-width:220px">
+      <button type="button" class="fh-btn fh-btn-secondary" onclick="addPiPlanet(this.closest('.pi-plan-block'))">+ Add Planet</button>
+      <button type="button" class="fh-btn fh-btn-danger ms-auto" onclick="this.closest('.pi-plan-block').remove()">Remove Plan</button>
+    </div>
+    <input class="form-control form-control-sm pi-plan-desc" type="text" placeholder="Short description" style="margin-bottom:8px">
+    <div class="pi-planet-list" style="display:flex;flex-direction:column;gap:6px"></div>`;
+  list.appendChild(div);
+}
+function addPiPlanet(planEl) {
+  const list = planEl.querySelector('.pi-planet-list');
+  const div = document.createElement('div');
+  div.className = 'pi-planet-block';
+  div.style.cssText = 'background:rgba(128,128,128,.08);border:1px solid var(--bs-border-color);border-radius:4px;padding:8px 10px';
+  const opts = PI_PLANET_TYPES.map(t => `<option>${t}</option>`).join('');
+  div.innerHTML = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:5px">
+      <select class="form-control form-control-sm pi-planet-type" style="max-width:110px">${opts}</select>
+      <input class="form-control form-control-sm pi-planet-name" type="text" placeholder="Role (e.g. Factory Planet)" style="max-width:170px">
+      <input class="form-control form-control-sm pi-planet-produces" type="text" placeholder="Produces (e.g. Robotics P3)" style="max-width:170px">
+      <button type="button" class="fh-btn fh-btn-danger" onclick="this.closest('.pi-planet-block').remove()">✕</button>
+    </div>
+    <input class="form-control form-control-sm pi-planet-desc" type="text" placeholder="Description (optional)" style="margin-bottom:6px">
+    <textarea class="form-control form-control-sm pi-planet-template" rows="2" placeholder="EVE PI export JSON (right-click template → Export)"></textarea>`;
+  list.appendChild(div);
+}
+
+// Restore tiers (saved ones on edit, or the submitted ones after an error)
+{% for tier in form_tiers %}
+(function() {
+  const n = addTierBlock('{{ tier.label|escapejs }}', '{{ tier.description|escapejs }}', '{{ tier.warning|escapejs }}');
+  {% for skill in tier.skills %}
+  addSkillTag(document.getElementById('tier-tags-'+n), '{{ skill.type_id }}', '{{ skill.name|escapejs }}', {{ skill.level }});
+  {% endfor %}
+})();
+{% endfor %}
+
+// Restore PI plans (saved ones on edit, or the submitted ones after an error)
+{% if form and form.is_skill_plan and form.pi_plans %}
+(function() {
+  // Read via json_script (not |safe) so plan/planet text fields can't break out of
+  // this <script> block — those are free-text values entered through the manage UI.
+  const plans = JSON.parse(document.getElementById('fit-pi-plans-data').textContent);
+  const PI_TYPES = ['Barren','Gas','Ice','Lava','Oceanic','Plasma','Storm','Temperate'];
+  plans.forEach(function(plan) {
+    addPiPlanBlock();
+    const blocks = document.querySelectorAll('.pi-plan-block');
+    const block = blocks[blocks.length - 1];
+    block.querySelector('.pi-plan-name').value = plan.name || '';
+    block.querySelector('.pi-plan-desc').value = plan.desc || '';
+    (plan.planets || []).forEach(function(p) {
+      addPiPlanet(block);
+      const planets = block.querySelectorAll('.pi-planet-block');
+      const planet = planets[planets.length - 1];
+      const sel = planet.querySelector('.pi-planet-type');
+      if (sel) sel.value = p.planet || 'Barren';
+      planet.querySelector('.pi-planet-name').value = p.name || '';
+      planet.querySelector('.pi-planet-produces').value = p.produces || '';
+      planet.querySelector('.pi-planet-desc').value = p.desc || '';
+      planet.querySelector('.pi-planet-template').value = p.template || '';
+    });
+  });
+})();
+{% endif %}
+</script>
+{% endblock %}

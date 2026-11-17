@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aa-fleet-hub"
+version = "0.2.0"
+description = "Fleet doctrine and skill readiness plugin for Alliance Auth"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Fastburn" }]
+requires-python = ">=3.10"
+dependencies = [
+    "allianceauth>=5.0.0",
+    "aa-memberaudit>=4.0.0",
+    "django-eveuniverse>=1.0.0",
+    "requests>=2.28.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Fastburn/aa-fleet-hub"
+Source = "https://github.com/Fastburn/aa-fleet-hub"
+Changelog = "https://github.com/Fastburn/aa-fleet-hub/blob/main/CHANGELOG.md"
+Issues = "https://github.com/Fastburn/aa-fleet-hub/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["aa_fleet_hub*"]
+
+[tool.setuptools.package-data]
+"*" = ["templates/**", "static/**"]

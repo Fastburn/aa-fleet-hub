@@ -1,0 +1,17 @@
+name: Potential Duplicates
+
+on:
+  issues:
+    types:
+      - opened
+
+jobs:
+  check-duplicates:
+    name: Check for potential duplicate issues
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for potential duplicates
+        uses: platisd/potential-duplicates@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          warn_on_potential_duplicates: false

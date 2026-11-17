@@ -1,0 +1,1 @@
+<span class="badge badge-{{ tier_data.badge }}">{% if not tier_data.has_skills %}No skills set{% elif tier_data.missing_count == 0 %}Ready{% elif tier_data.missing_count <= 2 %}{{ tier_data.missing_count }} skill{{ tier_data.missing_count|pluralize }}{% elif tier_data.missing_count <= 4 %}Training{% else %}Not yet{% endif %}</span>

@@ -1,0 +1,119 @@
+{% extends 'aa_fleet_hub/base.html' %}
+{% load i18n static %}
+
+{% block page_title %}My Skills{% endblock %}
+{% block nav_myskills %}active{% endblock %}
+
+{% block fleet_content %}
+<div class="container-fluid fh-page">
+
+  <header class="fh-page-hdr">
+    <h1>My Skills</h1>
+    <p>The skills {% if active_character_name %}<b>{{ active_character_name }}</b> still needs{% else %}you still need{% endif %} for each fit. Skill names in gold or red are the ones holding you back.</p>
+  </header>
+
+  {% include "aa_fleet_hub/partials/member_audit_alert.html" %}
+
+  {% if closest %}
+  <div class="fh-closest">
+    <div class="fh-closest-text">
+      <b>Closest to qualifying</b>
+      <span>{{ closest.missing }} skill{{ closest.missing|pluralize }} to go for <strong>{{ closest.fit.name }}</strong> at the {{ closest.tier.label }} tier.</span>
+    </div>
+    <button type="button" class="fh-btn fh-btn-secondary" onclick="fhShowFit('ms-fit-{{ closest.fit.id }}')">Show me</button>
+  </div>
+  {% endif %}
+
+  {% if not doctrine_data %}
+    <div class="alert alert-info">No doctrines available for your groups.</div>
+  {% else %}
+  <div class="fh-toolbar fh-tag-filter-bar">
+    {% if doctrine_tags|length > 1 %}
+    <button type="button" class="fh-btn fh-btn-secondary fh-tag-filter-btn active" aria-pressed="true" data-tag-filter="" onclick="filterDoctrineTag(this, '')">All</button>
+    {% for tag_label in doctrine_tags %}
+    <button type="button" class="fh-btn fh-btn-secondary fh-tag-filter-btn" aria-pressed="false" data-tag-filter="{{ tag_label }}" onclick="filterDoctrineTag(this, '{{ tag_label|escapejs }}')">{{ tag_label }}</button>
+    {% endfor %}
+    {% endif %}
+    <span class="spacer"></span>
+    <label class="fh-only-missing"><input type="checkbox" id="fh-only-missing"> Only show skills I'm missing</label>
+    <button type="button" class="fh-btn fh-btn-secondary" id="fh-toggle-all" onclick="fhToggleAll()">Collapse all</button>
+  </div>
+  {% endif %}
+
+  {% for tag_label, group_items, pinned in doctrine_groups %}
+  <section class="fh-section fh-tag-group" data-tag-group="{% if not pinned %}{{ tag_label }}{% endif %}"{% if pinned %} data-pinned{% endif %}>
+    {% if doctrine_groups|length > 1 %}
+    <h2>{{ tag_label }} <span class="count" data-total="{{ group_items|length }}">{{ group_items|length }} doctrine{{ group_items|length|pluralize }}</span></h2>
+    {% else %}
+    <h2 class="visually-hidden">Doctrines</h2>
+    {% endif %}
+    {% for item in group_items %}
+    {% with doctrine=item.doctrine fits=item.fits %}
+    <div class="fh-doc{% if not doctrine.collapsed_by_default %} open{% endif %}" data-doc-tag="{{ doctrine.tag_label }}">
+      <div class="fh-doc-hdr">
+        <span class="doctrine-arrow" aria-hidden="true">&#9654;&#xFE0E;</span>
+        <div class="fh-doc-title">
+          <h3><button type="button" class="fh-doc-toggle" aria-expanded="{% if doctrine.collapsed_by_default %}false{% else %}true{% endif %}" aria-controls="ms-doc-{{ doctrine.id }}">{{ doctrine.name }}</button> {% include "aa_fleet_hub/partials/doctrine_tag.html" with doctrine=doctrine %}</h3>
+        </div>
+        <span class="fh-doc-meta">{{ fits|length }} fit{{ fits|length|pluralize }}</span>
+      </div>
+      <div class="fh-doc-body" id="ms-doc-{{ doctrine.id }}">
+      {% for fit_item in fits %}
+        {% with fit=fit_item.fit readiness=fit_item.readiness %}
+        <div class="fh-skillfit" id="ms-fit-{{ fit.id }}">
+          <div class="fh-skillfit-hdr">
+            {% if fit.ship_type_id %}<img src="{{ fit.ship_image_url }}" alt="" onerror="this.style.display='none'">{% endif %}
+            <h4>{{ fit.name }}</h4>
+            {% if fit.is_skill_plan %}
+              <span class="skill-plan-badge">Skill Plan</span>
+            {% elif fit.role %}
+              <span class="badge badge-role">{{ fit.role }}</span>
+            {% endif %}
+            <span class="summary">
+              {% for tier_data in readiness.tiers %}
+                <span class="tier">{{ tier_data.tier.label }} {% include "aa_fleet_hub/partials/tier_badge.html" %}</span>
+              {% empty %}
+                No skill tiers set for this fit
+              {% endfor %}
+            </span>
+          </div>
+          {% for tier_data in readiness.tiers %}
+          <div class="fh-tier{% if tier_data.has_skills and tier_data.missing_count == 0 %} closed{% endif %}">
+            <h5 class="fh-tier-title">
+              <button type="button" class="fh-tier-hdr" aria-expanded="{% if tier_data.has_skills and tier_data.missing_count == 0 %}false{% else %}true{% endif %}" aria-controls="ms-tier-{{ fit.id }}-{{ forloop.counter }}">
+                <span class="doctrine-arrow" aria-hidden="true">&#9654;&#xFE0E;</span>
+                <span class="fh-tier-name">{{ tier_data.tier.label }}</span>
+                {% include "aa_fleet_hub/partials/tier_badge.html" %}
+              </button>
+            </h5>
+            <div class="fh-tier-body" id="ms-tier-{{ fit.id }}-{{ forloop.counter }}">
+              {% if not tier_data.has_skills %}
+                <p class="fh-tier-note">No skills set for this tier.</p>
+              {% else %}
+                {% if tier_data.missing_count == 0 %}<p class="fh-tier-note fh-tier-done">Nothing missing for this tier.</p>{% endif %}
+                <div class="fh-grid">
+                  {% for row in tier_data.skill_rows %}
+                    <div class="sg-row{% if row.sg_class == 'met' %} met-row{% endif %}">
+                      <span class="sg-name {{ row.sg_class }}" title="{{ row.tooltip }}">{{ row.skill_name }}</span>
+                      <span class="pips">
+                        {% for state in row.pips %}<span class="pip {{ state }}"></span>{% endfor %}
+                      </span>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endwith %}
+      {% endfor %}
+      </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+  </section>
+  {% endfor %}
+
+</div>
+{% endblock %}

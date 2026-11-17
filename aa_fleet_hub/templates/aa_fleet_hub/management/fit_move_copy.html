@@ -1,0 +1,48 @@
+{% extends 'aa_fleet_hub/base.html' %}
+{% load i18n static %}
+
+{% block page_title %}Move / Copy Fit{% endblock %}
+{% block nav_manage %}active{% endblock %}
+
+{% block fleet_content %}
+<div class="container-fluid">
+  <div class="card" style="max-width:560px">
+    <div class="card-header">
+      <div class="card-header-title">Move / Copy Fit</div>
+    </div>
+    <div class="card-body">
+
+      {% if error %}
+        <div class="alert alert-danger mb-3">{{ error }}</div>
+      {% endif %}
+
+      <div class="fh-form-group">
+        <span style="font-size:14px;font-weight:600">{{ fit.name }}</span>
+        <span class="fh-form-hint" style="display:inline">— currently in <em>{{ fit.doctrine.name }}</em></span>
+      </div>
+
+      <form method="post">
+        {% csrf_token %}
+        <div class="fh-form-group">
+          <label class="fh-form-label">Target Doctrine</label>
+          <select name="target_doctrine_id" class="form-select">
+            {% for d in doctrines %}
+              <option value="{{ d.id }}" {% if d.id == fit.doctrine_id %}selected{% endif %}>
+                {{ d.name }}{% if d.id == fit.doctrine_id %} (current){% endif %}{% if d.is_draft %} — Draft{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+          <span class="fh-form-hint">Copy duplicates the fit into the target doctrine. Move removes it from the current one.</span>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="submit" name="action" value="copy" class="fh-btn fh-btn-primary">Copy Here</button>
+          <button type="submit" name="action" value="move" class="fh-btn fh-btn-info"
+                  onclick="return confirm('Move this fit? It will be removed from {{ fit.doctrine.name|escapejs }}.')">Move Here</button>
+          <a href="{% url 'aa_fleet_hub:manage_index' %}" class="fh-btn fh-btn-secondary ms-auto">Cancel</a>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

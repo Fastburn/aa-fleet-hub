@@ -1,0 +1,16 @@
+{% if owned_characters %}
+<form method="post" action="{% url 'aa_fleet_hub:switch_character' %}" class="fh-char-switcher" style="margin-bottom:0">
+  {% csrf_token %}
+  {# Come back to the same view (#17). The #4 search rewrites the URL after load, so onchange sends the current one; this value is the no-JS fallback. #}
+  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+  <label class="fh-char-switcher-label" for="fh-char-switcher">Viewing as</label>
+  <select name="character_id" id="fh-char-switcher" class="fh-char-switcher-select" onchange="this.form.elements.next.value = location.pathname + location.search; this.form.submit()">
+    {% for ownership in owned_characters %}
+      <option value="{{ ownership.character.character_id }}"
+        {% if ownership.character.character_id == active_character_id %}selected{% endif %}>
+        {{ ownership.character.character_name }}
+      </option>
+    {% endfor %}
+  </select>
+</form>
+{% endif %}

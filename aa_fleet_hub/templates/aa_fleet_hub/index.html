@@ -1,0 +1,319 @@
+{% extends 'aa_fleet_hub/base.html' %}
+{% load i18n static %}
+
+{% block page_title %}{% if single_doctrine and doctrine_data %}{{ doctrine_data.0.doctrine.name }}{% else %}Doctrines{% endif %}{% endblock %}
+{% block nav_doctrines %}active{% endblock %}
+
+{% block fleet_content %}
+<div class="container-fluid fh-page" data-fh-page="doctrines">
+
+  <header class="fh-page-hdr">
+    <h1>Doctrines</h1>
+    <p>The fits the alliance flies. Open a doctrine to see its ships and whether {% if active_character_name %}<b>{{ active_character_name }}</b>{% else %}you{% endif %} can fly each one.</p>
+  </header>
+
+  <details class="fh-key" open>
+    <summary><span class="doctrine-arrow" aria-hidden="true">&#9654;&#xFE0E;</span> How to read this page</summary>
+    <div class="fh-key-groups">
+      <div class="fh-key-group">
+        <h2>Can you fly it?</h2>
+        <div class="fh-key-item"><span class="badge badge-ready">Ready</span> You have every skill</div>
+        <div class="fh-key-item"><span class="badge badge-close">2 skills</span> One or two skills short</div>
+        <div class="fh-key-item"><span class="badge badge-training">Training</span> A few weeks of training</div>
+        <div class="fh-key-item"><span class="badge badge-far">Not yet</span> A long way off</div>
+      </div>
+      <div class="fh-key-group">
+        <h2>Skill pips (one per level)</h2>
+        <div class="fh-key-item"><span class="pips"><span class="pip have"></span><span class="pip have"></span><span class="pip have"></span><span class="pip neutral"></span><span class="pip neutral"></span></span> Trained</div>
+        <div class="fh-key-item"><span class="pips"><span class="pip have"></span><span class="pip have"></span><span class="pip have"></span><span class="pip exceed"></span><span class="pip exceed"></span></span> More than needed</div>
+        <div class="fh-key-item"><span class="pips"><span class="pip unmet"></span><span class="pip unmet"></span><span class="pip short"></span><span class="pip neutral"></span><span class="pip neutral"></span></span> Gold: train next. Red: further out</div>
+        <div class="fh-key-item"><span class="pips"><span class="pip have"></span><span class="pip have"></span><span class="pip queued"></span><span class="pip queued"></span><span class="pip neutral"></span></span> In your training queue</div>
+      </div>
+      <div class="fh-key-group">
+        <h2>Ship picture</h2>
+        <div class="fh-key-item"><img src="https://images.evetech.net/types/670/render?size=64" alt="" class="hull-legend-img hull-legend-owned"> You own this hull</div>
+        <div class="fh-key-item"><img src="https://images.evetech.net/types/670/render?size=64" alt="" class="hull-legend-img hull-legend-missing"> You don't own one yet</div>
+      </div>
+    </div>
+  </details>
+
+  {% include "aa_fleet_hub/partials/member_audit_alert.html" %}
+
+  {% if single_doctrine %}
+  {# Single-doctrine view (#17): no search or filters, so a link never opens to an empty page. #}
+  <div class="fh-single-bar">
+    <a class="fh-btn fh-btn-secondary" href="{% url 'aa_fleet_hub:index' %}"><span aria-hidden="true">&#8592;</span> Show all doctrines</a>
+  </div>
+  {% if not doctrine_data %}
+    <div class="alert alert-info">Doctrine not found. It may have been removed, or you may not have access to it.</div>
+  {% endif %}
+  {% elif not doctrine_data %}
+    <div class="alert alert-info">No doctrines available.</div>
+  {% else %}
+  <div class="fh-filter" id="fh-doctrine-filter">
+    <div class="fh-toolbar">
+      <label class="visually-hidden" for="fh-ship-search">Search by ship</label>
+      <input type="search" id="fh-ship-search" class="form-control form-control-sm fh-ship-search" placeholder="Search by ship, e.g. Ferox" autocomplete="off" spellcheck="false">
+      {% if doctrine_tags|length > 1 %}
+      <details class="fh-facet" data-facet="tag">
+        <summary class="fh-btn fh-btn-secondary">Tag<span class="fh-facet-count"></span></summary>
+        <fieldset class="fh-facet-menu">
+          <legend class="visually-hidden">Tag</legend>
+          {% for tag_label in doctrine_tags %}
+          <label><input type="checkbox" data-value="{{ tag_label }}"> {{ tag_label }}</label>
+          {% endfor %}
+        </fieldset>
+      </details>
+      {% endif %}
+      {% if ship_classes|length > 1 %}
+      <details class="fh-facet" data-facet="class">
+        <summary class="fh-btn fh-btn-secondary">Ship class<span class="fh-facet-count"></span></summary>
+        <fieldset class="fh-facet-menu">
+          <legend class="visually-hidden">Ship class</legend>
+          {% for ship_class in ship_classes %}
+          <label><input type="checkbox" data-value="{{ ship_class }}"> {{ ship_class }}</label>
+          {% endfor %}
+        </fieldset>
+      </details>
+      {% endif %}
+      {% if roles|length > 1 %}
+      <details class="fh-facet" data-facet="role">
+        <summary class="fh-btn fh-btn-secondary">Role<span class="fh-facet-count"></span></summary>
+        <fieldset class="fh-facet-menu">
+          <legend class="visually-hidden">Role</legend>
+          {% for key, label in roles.items %}
+          <label><input type="checkbox" data-value="{{ key }}"> {{ label }}</label>
+          {% endfor %}
+        </fieldset>
+      </details>
+      {% endif %}
+      <span class="spacer"></span>
+      <button type="button" class="fh-btn fh-btn-secondary" id="fh-toggle-all" onclick="fhToggleAll()">Collapse all</button>
+    </div>
+    <div class="fh-chips" id="fh-filter-chips" hidden>
+      <span class="fh-facet-lbl">Filtered by</span>
+      <span id="fh-filter-chip-list"></span>
+      <button type="button" class="fh-chips-clear" data-filter-clear>Clear all</button>
+    </div>
+    <p class="visually-hidden" id="fh-filter-status" aria-live="polite"></p>
+  </div>
+  <div class="fh-filter-empty" id="fh-filter-empty" hidden>
+    <p id="fh-filter-empty-text"></p>
+    <button type="button" class="fh-btn fh-btn-secondary" data-filter-clear>Clear all filters</button>
+  </div>
+  {% endif %}
+
+  {% for tag_label, group_items, pinned in doctrine_groups %}
+  <section class="fh-section fh-tag-group" data-tag-group="{% if not pinned %}{{ tag_label }}{% endif %}"{% if pinned %} data-pinned{% endif %}>
+    {% if doctrine_groups|length > 1 %}
+    <h2>{{ tag_label }} <span class="count" data-total="{{ group_items|length }}">{{ group_items|length }} doctrine{{ group_items|length|pluralize }}</span></h2>
+    {% else %}
+    <h2 class="visually-hidden">Doctrines</h2>
+    {% endif %}
+    {% for item in group_items %}
+    {% with doctrine=item.doctrine fits=item.fits %}
+    <div class="fh-doc{% if single_doctrine or not doctrine.collapsed_by_default %} open{% endif %}" id="doctrine-{{ doctrine.id }}" data-doc-tag="{{ doctrine.tag_label }}">
+      <div class="fh-doc-hdr">
+        <span class="doctrine-arrow" aria-hidden="true">&#9654;&#xFE0E;</span>
+        <div class="fh-doc-title">
+          <h3><button type="button" class="fh-doc-toggle" aria-expanded="{% if single_doctrine or not doctrine.collapsed_by_default %}true{% else %}false{% endif %}" aria-controls="doctrine-body-{{ doctrine.id }}">{{ doctrine.name }}</button> {% include "aa_fleet_hub/partials/doctrine_tag.html" with doctrine=doctrine %}</h3>
+          {% if doctrine.description %}<p>{{ doctrine.description }}</p>{% endif %}
+        </div>
+        <span class="fh-doc-meta">{{ fits|length }} fit{{ fits|length|pluralize }} · you can fly {{ item.fly_count }}</span>
+        <div class="fh-doc-actions">
+          {% if doctrine.is_draft %}<span class="badge bg-warning text-dark">Draft</span>{% endif %}
+          {% if item.motds %}
+            <button type="button" class="fh-btn fh-btn-secondary"
+                    onclick="copyMotd(this, {{ item.motds.0.pk }})"
+                    title="Copy the MOTD: {{ item.motds.0.name }}">Copy MOTD</button>
+          {% endif %}
+          <button type="button" class="fh-btn fh-btn-secondary"
+                  data-copy-link="{{ doctrine.id }}"
+                  onclick="copyDoctrineLink({{ doctrine.id }})"
+                  title="Copy link to this doctrine">Link</button>
+        </div>
+      </div>
+
+      <div class="fh-doc-body" id="doctrine-body-{{ doctrine.id }}">
+
+        {% if doctrine.notes %}
+          <div class="fh-callout"><b>Doctrine notes</b>{{ doctrine.notes }}</div>
+        {% endif %}
+
+        {% if item.shared_skill_rows %}
+          <h4 class="fh-sublabel">Skills every fit in this doctrine needs</h4>
+          <div class="fh-grid fh-shared-grid">
+            {% for row in item.shared_skill_rows %}
+              <div class="sg-row">
+                <span class="sg-name {{ row.sg_class }}" title="{{ row.tooltip }}">{{ row.skill_name }}</span>
+                <span class="pips">
+                  {% for state in row.pips %}<span class="pip {{ state }}"></span>{% endfor %}
+                </span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if fits %}
+        <h4 class="fh-sublabel">Fits in this doctrine</h4>
+        <div class="fh-fits">
+        {% for fit_item in fits %}
+          {% with fit=fit_item.fit readiness=fit_item.readiness has_hull=fit_item.has_hull hull_locations=fit_item.hull_locations %}
+          <div class="fh-fit {% if fit.is_skill_plan %}skill-plan-row{% else %}highlight-{{ readiness.highlight }}{% endif %}" onclick="openFitPanel({{ fit.id }})"
+               data-ship-name="{{ fit_item.ship_name }}" data-ship-class="{{ fit_item.ship_class }}" data-role="{{ fit_item.role_key }}">
+            <div class="fh-fit-img{% if has_hull %} hull-owned{% elif has_hull == False %} hull-not-owned{% endif %}"
+                 {% if has_hull and hull_locations %}title="In hangar: {{ hull_locations|join:', ' }}"{% elif has_hull == False %}title="Not in hangar"{% endif %}>
+              {% if fit.ship_type_id %}
+                <img src="{{ fit.ship_image_url }}" alt="" onerror="this.style.display='none'">
+              {% endif %}
+            </div>
+            <div class="fh-fit-main">
+              <div class="fh-fit-name">
+                <h5>{{ fit.name }}</h5>
+                {% if fit_item.ship_name %}<span class="fh-match-badge" title="Matches your filters"><span class="visually-hidden">Matches your filters: </span>{{ fit_item.ship_name }}</span>{% endif %}
+                {% if fit.is_skill_plan %}
+                  <span class="skill-plan-badge">Skill Plan</span>
+                {% elif fit.role %}
+                  <span class="badge badge-role">{{ fit.role }}</span>
+                {% endif %}
+              </div>
+              {% if fit.description %}<p class="fh-fit-desc">{{ fit.description }}</p>{% endif %}
+              {% if fit.notes %}<p class="fh-fit-flag">&#9873; {{ fit.notes }}</p>{% endif %}
+              <div class="fh-ready">
+                <span>Can you fly it?</span>
+                {% for tier_data in readiness.tiers %}
+                  <span class="tier">{{ tier_data.tier.label }} {% include "aa_fleet_hub/partials/tier_badge.html" %}</span>
+                {% empty %}
+                  <span class="tier">No skill tiers set for this fit</span>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="fh-fit-cta">
+              <button type="button" class="fh-btn fh-btn-secondary" aria-label="View fit: {{ fit.name }}"
+                      onclick="event.stopPropagation(); openFitPanel({{ fit.id }})">View fit &#8594;</button>
+            </div>
+          </div>
+          {% endwith %}
+        {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if item.motds %}
+        <div class="fh-motds">
+          <h4 class="fh-sublabel">MOTDs</h4>
+          {% for motd in item.motds %}
+          <div class="fh-motd-line">
+            <span class="fh-motd-name">{{ motd.name }}</span>
+            {% if motd.is_default %}<span class="badge fh-motd-badge">Default</span>{% endif %}
+            <span class="fh-motd-actions">
+              {% if can_see_fleet_setup %}
+              <a href="{% url 'aa_fleet_hub:fleet_ops_index' %}#motd-{{ motd.pk }}" class="fh-motd-link" title="Open this MOTD in Fleet Setup">Fleet Setup</a>
+              {% endif %}
+              <button type="button" class="fh-btn fh-btn-secondary" onclick="copyMotd(this, {{ motd.pk }})">Copy</button>
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if item.structures %}
+        <div class="fh-structures">
+          <h4 class="fh-sublabel">Fleet Structure <span class="fh-sublabel-note">Anyone can apply this to their own fleet</span></h4>
+          {% for structure in item.structures %}
+          <div style="padding:10px 16px;{% if not forloop.last %}border-bottom:1px solid var(--bs-border-color);{% endif %}background:rgba(128,128,128,.03)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;user-select:none"
+                 data-fc-collapse="doc-struct-{{ doctrine.id }}-{{ forloop.counter }}">
+              <span class="doctrine-arrow open">&#9654;&#xFE0E;</span>
+              <span style="font-size:12px;font-weight:600;color:var(--bs-body-color)">{{ structure.name }}</span>
+              <span style="font-size:10px;color:var(--bs-secondary-color)">
+                · {% if structure.is_free_move %}Free-move ON{% else %}Free-move OFF{% endif %}
+              </span>
+              <span class="ms-auto d-flex align-items-center gap-2">
+                {% if item.motds %}
+                  {% include "aa_fleet_hub/partials/motd_picker.html" with structure=structure choices=item.motd_choices selected=item.motds.0 %}
+                {% endif %}
+                <button type="button" class="fh-btn fh-btn-secondary"
+                        data-struct-id="{{ structure.id }}" data-wings="{{ structure.wings|length }}"
+                        {% if item.motds %}data-motd-select="motd-pick-{{ structure.id }}"{% endif %}
+                        onclick="event.stopPropagation();applyStructure(this, '{% url 'aa_fleet_hub:structure_apply' structure.id %}')">Apply Structure</button>
+              </span>
+            </div>
+            <div id="struct-status-{{ structure.id }}" style="font-size:10px;color:var(--bs-secondary-color);padding:2px 0 0 2px"></div>
+            <div id="doc-struct-{{ doctrine.id }}-{{ forloop.counter }}" style="padding-left:4px">
+              {% for wing in structure.wings %}
+              <div style="margin-bottom:4px">
+                <div style="font-family:monospace;font-size:11px;color:#4d9de0;font-weight:600;letter-spacing:-.02em;cursor:pointer;user-select:none"
+                     data-fc-collapse="doc-wing-{{ doctrine.id }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
+                  <span class="doctrine-arrow open" style="font-size:9px">&#9654;&#xFE0E;</span> ◈ {{ wing.name }}
+                </div>
+                <div id="doc-wing-{{ doctrine.id }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
+                {% for squad in wing.squads %}
+                  {% if forloop.last %}<div style="font-family:monospace;font-size:11px;color:var(--bs-secondary-color);margin-left:2px">└── {{ squad }}</div>{% else %}<div style="font-family:monospace;font-size:11px;color:var(--bs-secondary-color);margin-left:2px">├── {{ squad }}</div>{% endif %}
+                {% endfor %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+          <div style="font-size:11px;color:var(--bs-secondary-color);padding:6px 16px 0">
+            "Apply Structure" pushes these wings/squads{% if item.motds %} and the chosen MOTD{% endif %} to your own
+            active in-game fleet (you must be fleet boss). First time, you'll be asked to
+            <a href="#" onclick="window.location.href=window.FLEET_AUTHORIZE_URL;return false;">authorize fleet access</a>.
+          </div>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+  </section>
+  {% endfor %}
+
+</div>
+{% endblock %}
+
+
+{% block fleet_panel %}
+<div class="fleet-panel-overlay" id="fleet-overlay" onclick="closeFitPanel()"></div>
+<div class="fleet-panel" id="fleet-panel">
+  <div id="fleet-panel-body" style="display:flex;flex-direction:column;height:100%;overflow:hidden;"></div>
+</div>
+{% endblock %}
+
+{% block fleet_js %}
+{{ motd_texts|json_script:"fh-motd-texts" }}
+<script>
+const FIT_PANEL_BASE = "{% url 'aa_fleet_hub:fit_panel' 0 %}".replace('0/panel/', '');
+
+window.FLEET_SWITCH_CHAR_URL = "{% url 'aa_fleet_hub:switch_character' %}";
+window.FLEET_AUTHORIZE_URL = "{% url 'aa_fleet_hub:fleet_authorize' %}";
+
+async function openFitPanel(fitId) {
+  const overlay = document.getElementById('fleet-overlay');
+  const panel   = document.getElementById('fleet-panel');
+  const body    = document.getElementById('fleet-panel-body');
+  body.innerHTML = '<div class="fp-empty">Loading…</div>';
+  overlay.classList.add('open');
+  panel.classList.add('open');
+  try {
+    const res = await fetch(FIT_PANEL_BASE + fitId + '/panel/');
+    body.innerHTML = await res.text();
+  } catch(e) {
+    body.innerHTML = '<div class="fp-empty">Failed to load fit data.</div>';
+  }
+}
+
+function closeFitPanel() {
+  document.getElementById('fleet-overlay').classList.remove('open');
+  document.getElementById('fleet-panel').classList.remove('open');
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && document.getElementById('fleet-panel').classList.contains('open')) {
+    closeFitPanel();
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends 'allianceauth/base-bs5.html' %}
+{% load i18n static fleet_tags %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'aa_fleet_hub/css/fleet.css' %}">{% endblock %}
+
+{# Fleet Hub's sections live in AA's own top bar. AA folds them behind its navbar toggler below lg. #}
+{% block header_nav_brand %}Fleet Hub{% endblock %}
+
+{% block header_nav_collapse_left %}
+  <li class="nav-item"><a class="nav-link {% block nav_doctrines %}{% endblock %}" href="{% url 'aa_fleet_hub:index' %}">Doctrines</a></li>
+  <li class="nav-item"><a class="nav-link {% block nav_myskills %}{% endblock %}" href="{% url 'aa_fleet_hub:my_skills' %}">My Skills</a></li>
+  {% if perms.aa_fleet_hub.fleet_command %}
+  <li class="nav-item"><a class="nav-link {% block nav_fleet_command %}{% endblock %}" href="{% url 'aa_fleet_hub:readiness_index' %}">Fleet Command</a></li>
+  {% endif %}
+  {% if perms.aa_fleet_hub.fleet_command or perms.aa_fleet_hub.manage_fits or perms.aa_fleet_hub.manage_doctrines %}
+  <li class="nav-item"><a class="nav-link {% block nav_fleet_ops %}{% endblock %}" href="{% url 'aa_fleet_hub:fleet_ops_index' %}">Fleet Setup</a></li>
+  {% endif %}
+  {% if perms.aa_fleet_hub.manage_fits or perms.aa_fleet_hub.manage_doctrines %}
+  <li class="nav-item"><a class="nav-link {% block nav_manage %}{% endblock %}" href="{% url 'aa_fleet_hub:manage_index' %}">Manage</a></li>
+  {% endif %}
+{% endblock %}
+
+{% block header_nav_collapse_right %}
+  <li class="nav-item fh-nav-switcher">{% character_switcher %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="fh-root">
+{% block fleet_content %}{% endblock %}
+{% block fleet_panel %}{% endblock %}
+</div>
+{% endblock %}
+
+{% block extra_javascript %}<script src="{% static 'aa_fleet_hub/js/fleet.js' %}"></script>{% block fleet_js %}{% endblock %}{% endblock %}
