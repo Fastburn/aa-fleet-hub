@@ -56,8 +56,10 @@ Members see which doctrines they qualify for and exactly which skills they're sh
 
 ### 1. Install the package
 
+Download the wheel (`aa_fleet_hub-<version>-py3-none-any.whl`) from the latest [release](https://github.com/Fastburn/aa-fleet-hub/releases/latest), then install it into your Alliance Auth environment:
+
 ```bash
-pip install aa-fleet-hub
+pip install aa_fleet_hub-<version>-py3-none-any.whl
 ```
 
 Or from source:
@@ -196,8 +198,10 @@ After skills are updated, the readiness cache will refresh on the next scheduled
 
 ## Upgrading
 
+Download the new wheel from the latest [release](https://github.com/Fastburn/aa-fleet-hub/releases/latest), then:
+
 ```bash
-pip install --upgrade aa-fleet-hub
+pip install --upgrade aa_fleet_hub-<version>-py3-none-any.whl
 python manage.py migrate aa_fleet_hub
 python manage.py collectstatic --noinput
 ```

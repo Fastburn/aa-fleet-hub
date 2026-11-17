@@ -1,17 +1,20 @@
 name: Release
 
+# Runs when a GitHub Release is published. Builds the package, checks the
+# release tag matches the version in pyproject.toml, and attaches the wheel
+# and sdist to the release. Publishing to PyPI only happens on a repository
+# where the Actions variable PYPI_PUBLISH is set to "true".
+
 on:
-  push:
-    tags:
-      - "v*"
+  release:
+    types: [published]
 
 jobs:
-  build-and-publish:
-    name: Build and publish to PyPI
+  build:
+    name: Build and attach to the release
     runs-on: ubuntu-latest
-    environment: release
     permissions:
-      id-token: write
+      contents: write
 
     steps:
       - name: Checkout
@@ -22,11 +25,48 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install build
-        run: pip install build
+      - name: Check the tag matches the package version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "Release tag $TAG does not match pyproject.toml version v$VERSION"
+            exit 1
+          fi
 
       - name: Build package
-        run: python -m build
+        run: |
+          pip install build
+          python -m build
+
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
+
+      - name: Keep the build for publishing
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    if: vars.PYPI_PUBLISH == 'true'
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download the build
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
